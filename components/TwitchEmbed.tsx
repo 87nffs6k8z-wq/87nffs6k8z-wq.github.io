@@ -1,49 +1,76 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useRef } from "react";
+
+declare global {
+  interface Window {
+    Twitch?: any;
+  }
+}
 
 export function TwitchEmbed({
   channel,
-  parentDomains
+  parents,
+  height = 400
 }: {
   channel: string;
-  parentDomains?: readonly string[];
+  parents: readonly string[];
+  height?: number;
 }) {
-  const [host, setHost] = useState<string | null>(null);
+  const containerId = useId().replace(/:/g, ""); // make it DOM-safe
+  const created = useRef(false);
 
   useEffect(() => {
-    setHost(window.location.hostname);
-  }, []);
+    if (created.current) return;
+    created.current = true;
 
-  const src = useMemo(() => {
-    const parents = (parentDomains && parentDomains.length > 0)
-      ? parentDomains
-      : (host ? [host] : []);
-
-    if (parents.length === 0) return null;
-
-    const params = new URLSearchParams({ channel });
-
-    // Twitch requires one or more parent= params
-    parents.forEach((p) => params.append("parent", p));
-
-    return `https://player.twitch.tv/?${params.toString()}`;
-  }, [channel, host, parentDomains]);
-
-  if (!src) {
-    return (
-      <div style={{ height: 400, borderRadius: 14, border: "1px solid rgba(255,255,255,.08)" }} />
+    // Load Twitch embed script once
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[data-twitch-embed="true"]'
     );
-  }
+
+    const loadScript = () =>
+      new Promise<void>((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = "https://embed.twitch.tv/embed/v1.js";
+        s.async = true;
+        s.dataset.twitchEmbed = "true";
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error("Failed to load Twitch embed script"));
+        document.body.appendChild(s);
+      });
+
+    const init = () => {
+      if (!window.Twitch?.Embed) return;
+
+      // Create embed
+      new window.Twitch.Embed(containerId, {
+        width: "100%",
+        height: String(height),
+        channel,
+        layout: "video",
+        parent: Array.from(parents) // must be array of domains (no protocol, no path)
+      });
+    };
+
+    (existing ? Promise.resolve() : loadScript())
+      .then(() => init())
+      .catch(() => {
+        // no-op; you can show a fallback button if you want
+      });
+  }, [channel, parents, containerId, height]);
 
   return (
-    <iframe
-      title="Twitch stream"
-      src={src}
-      height="400"
-      width="100%"
-      allowFullScreen
-      style={{ border: 0, borderRadius: 14, background: "rgba(0,0,0,.2)" }}
+    <div
+      id={containerId}
+      style={{
+        width: "100%",
+        height,
+        borderRadius: 14,
+        overflow: "hidden",
+        border: "1px solid rgba(255,255,255,.08)",
+        background: "rgba(0,0,0,.2)"
+      }}
     />
   );
 }

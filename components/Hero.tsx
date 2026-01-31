@@ -47,7 +47,7 @@ export function Hero() {
             <div style={{ marginTop: 10 }}>
             <TwitchEmbed
   channel={site.embeds.twitchChannel}
-  parentDomains={site.embeds.twitchParents}
+  parents={site.embeds.twitchParents}
 />
             </div>
           </div>
