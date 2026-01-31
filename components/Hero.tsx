@@ -2,6 +2,8 @@ import { site } from "@/content/site";
 import { applyThemeVars } from "@/lib/utils";
 import { StockChart } from "@/components/StockChart";
 import { TwitchEmbed } from '@/components/TwitchEmbed';
+import { ExternalArrowIcon } from "@/components/ExternalArrowIcon";
+
 
 export function Hero() {
   const themeStyle = applyThemeVars(site.brand.colors);
@@ -26,7 +28,16 @@ export function Hero() {
 
             <div className="btnRow">
               <a className="btn btnPrimary" href={site.links.primaryCta.href}>
-                {site.links.primaryCta.label} <span style={{ color: "var(--muted)" }}>↗</span>
+                {site.links.primaryCta.label} <span
+                  aria-hidden="true"
+                  style={{
+                    color: "var(--muted)",
+                    display: "inline-flex",
+                    alignItems: "center"
+                  }}
+                >
+                  <ExternalArrowIcon size={14} />
+                </span>
               </a>
               <a className="btn" href={site.links.secondaryCta.href}>
                 {site.links.secondaryCta.label}
@@ -45,10 +56,10 @@ export function Hero() {
           <div className="panel" style={{ marginTop: 16, padding: 14 }}>
             <div className="kicker">Live Feed</div>
             <div style={{ marginTop: 10 }}>
-            <TwitchEmbed
-  channel={site.embeds.twitchChannel}
-  parents={site.embeds.twitchParents}
-/>
+              <TwitchEmbed
+                channel={site.embeds.twitchChannel}
+                parents={site.embeds.twitchParents}
+              />
             </div>
           </div>
         ) : null}
