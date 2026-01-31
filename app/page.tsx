@@ -22,7 +22,7 @@ export default function Page() {
             <Schedule />
           </Section>
 
-          <Section id="highlights" title="Highlights" subtitle="Curated assets from the G-Corp archive">
+          <Section id="highlights" title="Highlights" subtitle="Curated assets from the G Corp archive">
             <Highlights />
           </Section>
         </Container>

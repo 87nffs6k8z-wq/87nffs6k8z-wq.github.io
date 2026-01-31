@@ -1,6 +1,7 @@
 import { site } from "@/content/site";
 import { Card } from "@/components/Card";
 import { SocialIcon } from "@/components/SocialIcon";
+import { ExternalArrowIcon } from "@/components/ExternalArrowIcon";
 
 export function LinksGrid() {
   return (
@@ -35,7 +36,16 @@ export function LinksGrid() {
                 </div>
               </div>
 
-              <span style={{ color: "var(--muted)" }}>↗</span>
+              <span
+                aria-hidden="true"
+                style={{
+                  color: "var(--muted)",
+                  display: "inline-flex",
+                  alignItems: "center"
+                }}
+              >
+                <ExternalArrowIcon size={14} />
+              </span>
             </div>
           </Card>
         </a>
