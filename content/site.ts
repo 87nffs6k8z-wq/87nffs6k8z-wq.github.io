@@ -23,12 +23,12 @@ export const site = {
   
       // Link buttons grid
       socials: [
-        { label: "Twitch", href: "https://www.twitch.tv/itsgazpacho" },
-        { label: "YouTube", href: "https://www.youtube.com/@itsgazpacho" },
-        { label: "TikTok", href: "https://www.tiktok.com/@itsgazpacho1" },
-        { label: "Discord", href: "https://discord.com/invite/acsztFJVwB" },
-        { label: "Instagram", href: "https://instagram.com/gzpch_" },
-        { label: "Donate", href: "https://streamelements.com/itsgazpacho/tip" }
+        { label: "Twitch", href: "https://www.twitch.tv/itsgazpacho", icon: "twitch" },
+        { label: "YouTube", href: "https://www.youtube.com/@itsgazpacho", icon: "youtube" },
+        { label: "TikTok", href: "https://www.tiktok.com/@itsgazpacho1", icon: "tiktok" },
+        { label: "Discord", href: "https://discord.com/invite/acsztFJVwB", icon: "discord" },
+        { label: "Instagram", href: "https://instagram.com/gzpch_", icon: "instagram" },
+        { label: "Donate", href: "https://streamelements.com/itsgazpacho/tip", icon: "donate" }
       ]
     },
   
