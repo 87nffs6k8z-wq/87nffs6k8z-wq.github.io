@@ -7,7 +7,7 @@ export function TwitchEmbed({
   parentDomains
 }: {
   channel: string;
-  parentDomains?: string[];
+  parentDomains?: readonly string[];
 }) {
   const [host, setHost] = useState<string | null>(null);
 
