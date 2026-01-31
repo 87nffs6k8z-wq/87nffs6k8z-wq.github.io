@@ -30,9 +30,6 @@ export function LinksGrid() {
 
                 <div>
                   <div style={{ fontWeight: 800 }}>{l.label}</div>
-                  <div className="p" style={{ fontSize: 13, marginTop: 6 }}>
-                    Authorized external endpoint
-                  </div>
                 </div>
               </div>
 
