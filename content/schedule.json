@@ -1,0 +1,9 @@
+{
+    "timezone": "America/New_York",
+    "items": [
+      { "day": "Mon", "time": "7:00 PM", "title": "Market Close Raid" },
+      { "day": "Wed", "time": "8:30 PM", "title": "Midweek Missions" },
+      { "day": "Fri", "time": "9:00 PM", "title": "Gains & Games" },
+      { "day": "Sat", "time": "2:00 PM", "title": "Weekend Ops" }
+    ]
+  }
