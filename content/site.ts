@@ -35,7 +35,10 @@ export const site = {
     embeds: {
       // Leave empty string "" to hide sections automatically
       twitchChannel: "itsgazpacho", // e.g. "myChannelName"
-      youtubePlaylistOrVideo: "PLT-GAle3uJjJIQv7Y8ZyKfsPQhjxLJwHt" // e.g. "PLxxxx" OR "dQw4w9WgXcQ"
+      youtubePlaylistOrVideo: "PLT-GAle3uJjJIQv7Y8ZyKfsPQhjxLJwHt", // e.g. "PLxxxx" OR "dQw4w9WgXcQ"
+      twitchParents: [
+        "Y87nffs6k8z-wq.github.io"
+      ]
     },
   
     contact: {
@@ -48,7 +51,8 @@ export const site = {
       title: "G Corp Streamer Portal",
       description:
         "A futuristic corporate-themed streamer landing page. Built with static Next.js and deployed on GitHub Pages."
-    }
+    },
+    
   } as const;
   
   export type SiteConfig = typeof site;

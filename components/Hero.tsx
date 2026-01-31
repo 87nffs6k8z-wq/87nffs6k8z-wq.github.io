@@ -1,6 +1,7 @@
 import { site } from "@/content/site";
 import { applyThemeVars } from "@/lib/utils";
 import { StockChart } from "@/components/StockChart";
+import { TwitchEmbed } from '@/components/TwitchEmbed';
 
 export function Hero() {
   const themeStyle = applyThemeVars(site.brand.colors);
@@ -44,14 +45,10 @@ export function Hero() {
           <div className="panel" style={{ marginTop: 16, padding: 14 }}>
             <div className="kicker">Live Feed</div>
             <div style={{ marginTop: 10 }}>
-              <iframe
-                title="Twitch stream"
-                src={`https://player.twitch.tv/?channel=${encodeURIComponent(site.embeds.twitchChannel)}&parent=${typeof window !== "undefined" ? window.location.hostname : "localhost"}`}
-                height="400"
-                width="100%"
-                allowFullScreen
-                style={{ border: "0", borderRadius: 14, background: "rgba(0,0,0,.2)" }}
-              />
+            <TwitchEmbed
+  channel={site.embeds.twitchChannel}
+  parentDomains={site.embeds.twitchParents}
+/>
             </div>
           </div>
         ) : null}
