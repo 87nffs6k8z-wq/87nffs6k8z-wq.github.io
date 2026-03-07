@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { newId, type RecurringExpense } from "../lib/storage";
+import { handleNumberArrowStep } from "../lib/numberInput";
 
 const MONTHS = [
   { value: 1, label: "January" },
@@ -18,7 +19,13 @@ const MONTHS = [
   { value: 12, label: "December" },
 ];
 
-export function RecurringExpenseForm({ onAdd }: { onAdd: (e: RecurringExpense) => void }) {
+export function RecurringExpenseForm({
+  onAdd,
+  onCancel,
+}: {
+  onAdd: (e: RecurringExpense) => void;
+  onCancel: () => void;
+}) {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState<string>("");
   const [cadence, setCadence] = useState<"monthly" | "annual">("monthly");
@@ -68,7 +75,14 @@ export function RecurringExpenseForm({ onAdd }: { onAdd: (e: RecurringExpense) =
 
   return (
     <div className="card">
-      <h2 className="h2">Add expense</h2>
+      <div className="cardHeader">
+        <h2 className="h2" style={{ margin: 0 }}>
+          Add Expense
+        </h2>
+        <button className="button ghost" type="button" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
 
       <div className="form" aria-label="Add recurring expense form">
         <div className="field">
@@ -96,8 +110,9 @@ export function RecurringExpenseForm({ onAdd }: { onAdd: (e: RecurringExpense) =
             type="number"
             inputMode="decimal"
             min="0"
-            step="0.01"
+            step="1"
             value={amount}
+            onKeyDown={handleNumberArrowStep}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
             aria-describedby="recurringAmountHint"
@@ -125,7 +140,7 @@ export function RecurringExpenseForm({ onAdd }: { onAdd: (e: RecurringExpense) =
         {cadence === "monthly" ? (
           <div className="field">
             <label className="label" htmlFor="recurring-due-day">
-              Due day (1-31)
+              Due Day (1-31)
             </label>
             <input
               className="input"
@@ -135,6 +150,7 @@ export function RecurringExpenseForm({ onAdd }: { onAdd: (e: RecurringExpense) =
               max="31"
               step="1"
               value={dueDay}
+              onKeyDown={handleNumberArrowStep}
               onChange={(e) => setDueDay(e.target.value)}
               aria-describedby="recurringDueDayHint"
             />
@@ -145,7 +161,7 @@ export function RecurringExpenseForm({ onAdd }: { onAdd: (e: RecurringExpense) =
         ) : (
           <div className="field">
             <label className="label" htmlFor="recurring-due-month">
-              Due month
+              Due Month
             </label>
             <select
               className="input"
@@ -163,7 +179,7 @@ export function RecurringExpenseForm({ onAdd }: { onAdd: (e: RecurringExpense) =
         )}
 
         <button className="button" type="button" onClick={submit} disabled={!canSubmit} aria-disabled={!canSubmit}>
-          Add
+          Add Expense
         </button>
       </div>
     </div>

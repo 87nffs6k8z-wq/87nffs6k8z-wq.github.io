@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Expense, newId } from "../lib/storage";
 import { todayISO } from "../lib/month";
+import { handleNumberArrowStep } from "../lib/numberInput";
 
 const CATEGORIES = ["Rent", "Utilities", "Groceries", "Transport", "Subscriptions", "Dining", "Other"];
 
@@ -83,8 +84,9 @@ export function ExpenseForm({ onAdd }: { onAdd: (e: Expense) => void }) {
             type="number"
             inputMode="decimal"
             min="0"
-            step="0.01"
+            step="1"
             value={amount}
+            onKeyDown={handleNumberArrowStep}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
             aria-describedby="amountHint"

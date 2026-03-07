@@ -55,33 +55,6 @@ export default function ExpensesPage() {
         <p className="muted">Track recurring expenses like rent or annual fees. Saved locally in this browser.</p>
       </header>
 
-      <div className="card">
-        <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-          <h2 className="h2" style={{ margin: 0 }}>
-            Summary
-          </h2>
-          <button className="button" type="button" onClick={() => setShowForm((v) => !v)} aria-expanded={showForm}>
-            {showForm ? "Hide form" : "Add expense"}
-          </button>
-        </div>
-      </div>
-
-      <div className="cards">
-        <article className="card" aria-label="Monthly total">
-          <p className="kicker">Monthly</p>
-          <p className="stat">{money(totals.monthly)}</p>
-        </article>
-        <article className="card" aria-label="Annual total">
-          <p className="kicker">Annual</p>
-          <p className="stat">{money(totals.annual)}</p>
-        </article>
-        <article className="card" aria-label="Monthly equivalent">
-          <p className="kicker">Monthly Equivalent</p>
-          <p className="stat">{money(totals.monthly + totals.annualMonthlyBudgeted)}</p>
-          <p className="hint">Monthly recurring plus annual set-asides based on next due month.</p>
-        </article>
-      </div>
-
       {showForm ? (
         <RecurringExpenseForm
           onAdd={(exp) => {
@@ -94,8 +67,38 @@ export default function ExpensesPage() {
             });
             setShowForm(false);
           }}
+          onCancel={() => setShowForm(false)}
         />
-      ) : null}
+      ) : (
+        <>
+          <div className="card">
+            <div className="cardHeader">
+              <h2 className="h2" style={{ margin: 0 }}>
+                Summary
+              </h2>
+              <button className="button" type="button" onClick={() => setShowForm(true)}>
+                Add Expense
+              </button>
+            </div>
+          </div>
+
+          <div className="cards">
+            <article className="card" aria-label="Monthly total">
+              <p className="kicker">Monthly</p>
+              <p className="stat">{money(totals.monthly)}</p>
+            </article>
+            <article className="card" aria-label="Annual total">
+              <p className="kicker">Annual</p>
+              <p className="stat">{money(totals.annual)}</p>
+            </article>
+            <article className="card" aria-label="Monthly equivalent">
+              <p className="kicker">Monthly Equivalent</p>
+              <p className="stat">{money(totals.monthly + totals.annualMonthlyBudgeted)}</p>
+              <p className="hint">Monthly recurring plus annual set-asides based on next due month.</p>
+            </article>
+          </div>
+        </>
+      )}
 
       <RecurringExpenseList
         items={state.recurringExpenses}

@@ -36,7 +36,7 @@ export function IncomeForm({ onAdd, onCancel }: { onAdd: (i: Income) => void; on
     <div className="card">
       <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
         <h2 className="h2" style={{ margin: 0 }}>
-          Add income
+          Add Income
         </h2>
         <button className="button ghost" type="button" onClick={onCancel}>
           Cancel
@@ -63,7 +63,7 @@ export function IncomeForm({ onAdd, onCancel }: { onAdd: (i: Income) => void; on
           <label className="label" htmlFor="income-amount">
             Amount
           </label>
-          <p className="hint">The amount you recieve per paycheck after taxes.</p>
+          <p className="hint">The amount you receive per paycheck after taxes.</p>
           <input
             className="input"
             id="income-amount"
@@ -141,7 +141,7 @@ export function IncomeForm({ onAdd, onCancel }: { onAdd: (i: Income) => void; on
         ) : null}
 
         <button className="button" type="button" onClick={submit} disabled={!canSubmit} aria-disabled={!canSubmit}>
-          Add
+          Add Income
         </button>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { defaultBudget, loadBudget, newId, saveBudget, type Allocation, type OnboardingExpense, type PayCycle } from "../lib/budgetStorage";
 import { useHydrated } from "../lib/useHydrated";
+import { handleNumberArrowStep } from "../lib/numberInput";
 
 type AllocationDraft = Allocation;
 type ExpenseDraft = OnboardingExpense;
@@ -249,9 +250,10 @@ export default function OnboardingPage() {
               type="number"
               inputMode="decimal"
               min="0"
-              step="0.01"
+              step="1"
               required
               value={paycheckAmount}
+              onKeyDown={handleNumberArrowStep}
               onChange={(e) => setPaycheckAmount(Math.max(0, Number(e.target.value || 0)))}
             />
 
@@ -314,8 +316,9 @@ export default function OnboardingPage() {
                     type="number"
                     inputMode="decimal"
                     min="0"
-                    step="0.01"
+                    step="1"
                     value={item.amount}
+                    onKeyDown={handleNumberArrowStep}
                     onChange={(e) =>
                       setExpenses((prev) =>
                         prev.map((row) =>
@@ -349,7 +352,7 @@ export default function OnboardingPage() {
                   type="button"
                   onClick={() => setExpenses((prev) => prev.filter((row) => row.id !== item.id))}
                 >
-                  Remove
+                  Delete
                 </button>
               </div>
             ))}
@@ -436,8 +439,9 @@ export default function OnboardingPage() {
                     type="number"
                     inputMode="decimal"
                     min="0"
-                    step="0.01"
+                    step="1"
                     value={item.value}
+                    onKeyDown={handleNumberArrowStep}
                     onChange={(e) =>
                       setAllocations((prev) =>
                         prev.map((row) =>
@@ -452,7 +456,7 @@ export default function OnboardingPage() {
                   type="button"
                   onClick={() => setAllocations((prev) => prev.filter((row) => row.id !== item.id))}
                 >
-                  Remove
+                  Delete
                 </button>
               </div>
             ))}

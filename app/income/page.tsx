@@ -51,16 +51,18 @@ export default function IncomePage() {
         <p className="muted">Track income sources and pay cycles. Saved locally in this browser.</p>
       </header>
 
-      <div className="card">
-        <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-          <h2 className="h2" style={{ margin: 0 }}>
-            Income
-          </h2>
-          <button className="button" type="button" onClick={() => setShowForm(true)}>
-            Add income
-          </button>
+      {!showForm ? (
+        <div className="card">
+          <div className="cardHeader">
+            <h2 className="h2" style={{ margin: 0 }}>
+              Income
+            </h2>
+            <button className="button" type="button" onClick={() => setShowForm(true)}>
+              Add Income
+            </button>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {showForm ? (
         <IncomeForm

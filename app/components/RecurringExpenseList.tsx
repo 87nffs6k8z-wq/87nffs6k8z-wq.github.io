@@ -43,7 +43,7 @@ export function RecurringExpenseList({
   if (items.length === 0) {
     return (
       <div className="card">
-        <h2 className="h2">Current expenses</h2>
+        <h2 className="h2">Current Expenses</h2>
         <p className="muted">No expenses yet. Add your monthly or annual items.</p>
       </div>
     );
@@ -51,9 +51,9 @@ export function RecurringExpenseList({
 
   return (
     <div className="card">
-      <h2 className="h2">Current expenses</h2>
+      <h2 className="h2">Current Expenses</h2>
 
-      <div style={{ overflowX: "auto" }}>
+      <div className="recurringTableDesktop" style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
@@ -87,6 +87,27 @@ export function RecurringExpenseList({
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="recurringMobileList" aria-label="Expenses list">
+        {items.map((e) => (
+          <article key={e.id} className="recurringMobileItem">
+            <div>
+              <p className="kicker">{e.cadence === "annual" ? "Annual" : "Monthly"}</p>
+              <h3 className="h2">{e.name}</h3>
+              <p className="muted">{dueLabel(e)}</p>
+            </div>
+            <div className="recurringMobileRow">
+              <p className="stat">{money(e.amount)}</p>
+              {e.cadence === "annual" ? (
+                <p className="hint">{money(monthlySetAsideForAnnual(e))}/mo allocated</p>
+              ) : null}
+            </div>
+            <button className="button ghost" type="button" onClick={() => onDelete(e.id)}>
+              Delete
+            </button>
+          </article>
+        ))}
       </div>
     </div>
   );

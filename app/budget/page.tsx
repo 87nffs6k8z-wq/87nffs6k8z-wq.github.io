@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { loadState, saveState, type BudgetCategory, type BudgetState, newId } from "../lib/storage";
 import { useHydrated } from "../lib/useHydrated";
+import { handleNumberArrowStep } from "../lib/numberInput";
 
 export default function BudgetPage() {
   const hydrated = useHydrated();
@@ -154,12 +155,12 @@ export default function BudgetPage() {
       </header>
 
       <div className="card">
-        <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <div className="cardHeader">
           <h2 className="h2" style={{ margin: 0 }}>
             Categories
           </h2>
           <button className="button" type="button" onClick={addCategory}>
-            Add category
+            Add Category
           </button>
         </div>
 
@@ -195,14 +196,15 @@ export default function BudgetPage() {
                         />
                       </td>
                       <td style={{ padding: 10, borderBottom: "1px solid var(--line)", width: 160 }}>
-                        <div className="row" style={{ alignItems: "center" }}>
+                        <div className="row" style={{ alignItems: "center", flexWrap: "nowrap" }}>
                           <input
                             className="input"
                             type="number"
                             inputMode="decimal"
                             min="0"
-                            step="0.01"
+                            step="1"
                             value={c.percent}
+                            onKeyDown={handleNumberArrowStep}
                             onChange={(e) => updatePercent(c.id, Number(e.target.value || 0))}
                           />
                           <span className="muted">%</span>
@@ -210,7 +212,7 @@ export default function BudgetPage() {
                       </td>
                       <td style={{ padding: 10, borderBottom: "1px solid var(--line)", width: 1 }}>
                         <button className="button ghost" type="button" onClick={() => removeCategory(c.id)}>
-                          Remove
+                          Delete
                         </button>
                       </td>
                     </tr>
@@ -232,12 +234,12 @@ export default function BudgetPage() {
       </div>
 
       <div className="card">
-        <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <div className="cardHeader">
           <h2 className="h2" style={{ margin: 0 }}>
-            Fixed items
+            Fixed Items
           </h2>
           <button className="button" type="button" onClick={addFixedItem}>
-            Add fixed item
+            Add Fixed Item
           </button>
         </div>
 
@@ -277,14 +279,15 @@ export default function BudgetPage() {
                         type="number"
                         inputMode="decimal"
                         min="0"
-                        step="0.01"
+                        step="1"
                         value={item.value}
+                        onKeyDown={handleNumberArrowStep}
                         onChange={(e) => updateFixedItem(item.id, { value: Number(e.target.value || 0) })}
                       />
                     </td>
                     <td style={{ padding: 10, borderBottom: "1px solid var(--line)", width: 1 }}>
                       <button className="button ghost" type="button" onClick={() => removeFixedItem(item.id)}>
-                        Remove
+                        Delete
                       </button>
                     </td>
                   </tr>
