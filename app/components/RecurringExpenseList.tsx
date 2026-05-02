@@ -3,6 +3,8 @@
 import { money } from "../lib/currency";
 import { annualMonthlySetAside } from "../lib/annualSetAside";
 import type { RecurringExpense } from "../lib/storage";
+import { WidgetCard } from "./WidgetCard";
+import { PaperTable } from "./PaperTable";
 
 const MONTH_LABELS = [
   "",
@@ -42,52 +44,32 @@ export function RecurringExpenseList({
 }) {
   if (items.length === 0) {
     return (
-      <div className="card">
-        <h2 className="h2">Current Expenses</h2>
+      <WidgetCard title="Current Expenses">
         <p className="muted">No expenses yet. Add your monthly or annual items.</p>
-      </div>
+      </WidgetCard>
     );
   }
 
   return (
-    <div className="card">
-      <h2 className="h2">Current Expenses</h2>
-
-      <div className="recurringTableDesktop" style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              {["Name", "Frequency", "Due", "Amount", ""].map((h) => (
-                <th key={h} style={{ textAlign: "left", padding: 10, borderBottom: "1px solid var(--line)" }}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((e) => (
-              <tr key={e.id}>
-                <td style={{ padding: 10, borderBottom: "1px solid var(--line)" }}>{e.name}</td>
-                <td style={{ padding: 10, borderBottom: "1px solid var(--line)", textTransform: "capitalize" }}>
-                  {e.cadence}
-                </td>
-                <td style={{ padding: 10, borderBottom: "1px solid var(--line)" }}>{dueLabel(e)}</td>
-                <td style={{ padding: 10, borderBottom: "1px solid var(--line)" }}>
-                  {money(e.amount)}
-                  {e.cadence === "annual" ? (
-                    <span className="muted"> ({money(monthlySetAsideForAnnual(e))}/mo allocated)</span>
-                  ) : null}
-                </td>
-                <td style={{ padding: 10, borderBottom: "1px solid var(--line)" }}>
-                  <button className="button ghost" type="button" onClick={() => onDelete(e.id)}>
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <WidgetCard title="Current Expenses">
+      <PaperTable className="recurringTableDesktop" headers={["Name", "Frequency", "Due", "Amount", ""]}>
+        {items.map((e) => (
+          <tr key={e.id}>
+            <td>{e.name}</td>
+            <td className="cellCapitalize">{e.cadence}</td>
+            <td>{dueLabel(e)}</td>
+            <td>
+              {money(e.amount)}
+              {e.cadence === "annual" ? <span className="muted"> ({money(monthlySetAsideForAnnual(e))}/mo allocated)</span> : null}
+            </td>
+            <td className="colNarrow">
+              <button className="button ghost" type="button" onClick={() => onDelete(e.id)}>
+                Delete
+              </button>
+            </td>
+          </tr>
+        ))}
+      </PaperTable>
 
       <div className="recurringMobileList" aria-label="Expenses list">
         {items.map((e) => (
@@ -109,6 +91,6 @@ export function RecurringExpenseList({
           </article>
         ))}
       </div>
-    </div>
+    </WidgetCard>
   );
 }

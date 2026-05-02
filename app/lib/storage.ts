@@ -7,11 +7,13 @@ import {
   type BudgetState,
   type Expense,
   type Income,
+  type OnboardingExpense,
   type PayCycle,
   type RecurringExpense,
+  type Allocation,
 } from "./budgetStorage";
 
-export type { BudgetCategory, BudgetState, Expense, Income, PayCycle, RecurringExpense };
+export type { Allocation, BudgetCategory, BudgetState, Expense, Income, OnboardingExpense, PayCycle, RecurringExpense };
 
 export function defaultState(): BudgetState {
   return defaultBudget();

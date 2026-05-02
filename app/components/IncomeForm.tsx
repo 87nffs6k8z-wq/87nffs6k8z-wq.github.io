@@ -34,10 +34,8 @@ export function IncomeForm({ onAdd, onCancel }: { onAdd: (i: Income) => void; on
 
   return (
     <div className="card">
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-        <h2 className="h2" style={{ margin: 0 }}>
-          Add Income
-        </h2>
+      <h2 className="h2">Add Income</h2>
+      <div className="row sectionActions">
         <button className="button ghost" type="button" onClick={onCancel}>
           Cancel
         </button>
@@ -79,8 +77,8 @@ export function IncomeForm({ onAdd, onCancel }: { onAdd: (i: Income) => void; on
           <legend className="legend">Pay cycle</legend>
 
           <div className="radioRow" role="radiogroup" aria-label="Pay cycle type">
-            <div className="radioLabel" style={{ justifyContent: "space-between", width: "100%" }}>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+            <div className="radioLabel radioLabelSplit">
+              <div className="radioOption">
                 <input
                   className="radio"
                   id="income-payCycle-biweekly"
@@ -90,7 +88,7 @@ export function IncomeForm({ onAdd, onCancel }: { onAdd: (i: Income) => void; on
                   checked={payCycle === "biweekly"}
                   onChange={() => setPayCycle("biweekly")}
                 />
-                <label htmlFor="income-payCycle-biweekly" style={{ fontWeight: 700 }}>
+                <label className="radioOptionLabel" htmlFor="income-payCycle-biweekly">
                   Bi-weekly
                 </label>
               </div>
@@ -100,8 +98,8 @@ export function IncomeForm({ onAdd, onCancel }: { onAdd: (i: Income) => void; on
               </InfoTip>
             </div>
 
-            <div className="radioLabel" style={{ justifyContent: "space-between", width: "100%" }}>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+            <div className="radioLabel radioLabelSplit">
+              <div className="radioOption">
                 <input
                   className="radio"
                   id="income-payCycle-semimonthly"
@@ -111,7 +109,7 @@ export function IncomeForm({ onAdd, onCancel }: { onAdd: (i: Income) => void; on
                   checked={payCycle === "semimonthly"}
                   onChange={() => setPayCycle("semimonthly")}
                 />
-                <label htmlFor="income-payCycle-semimonthly" style={{ fontWeight: 700 }}>
+                <label className="radioOptionLabel" htmlFor="income-payCycle-semimonthly">
                   Semi-monthly
                 </label>
               </div>

@@ -5,17 +5,14 @@ import { BottomNav } from "./components/BottomNav";
 import { OnboardingGate } from "./components/OnboardingGate";
 
 export const metadata: Metadata = {
-  title: "Neo Budget",
-  description: "A simple, futuristic budgeting starter.",
+  title: "Paper & Ink Ledger",
+  description: "A ledger-style budgeting workspace for income, expenses, and budget planning.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <div className="bgGrid" aria-hidden="true" />
-        <div className="bgGlow" aria-hidden="true" />
-
         <SiteHeader />
 
         <main id="main" className="main">
@@ -23,9 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </main>
 
         <footer className="footer" aria-label="Footer">
-          <p className="muted">
-            Built for GitHub Pages static export. Keyboard-friendly. Reduced-motion aware.
-          </p>
+          <p>Paper &amp; Ink Ledger. Stored locally under budgetApp:v1.</p>
         </footer>
 
         {/* Mobile-only bottom navigation */}

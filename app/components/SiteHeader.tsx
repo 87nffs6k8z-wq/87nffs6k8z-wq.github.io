@@ -16,7 +16,7 @@ export function SiteHeader() {
       <div className="headerInner">
         <Link className="brand" href="/" aria-label="Home">
           <span className="brandMark" aria-hidden="true" />
-          <span className="brandText">NEO BUDGET</span>
+          <span className="brandText">Paper &amp; Ink Ledger</span>
         </Link>
 
         <nav className="topNav" aria-label="Primary">

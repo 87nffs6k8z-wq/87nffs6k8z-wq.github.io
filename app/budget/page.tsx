@@ -1,13 +1,47 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { loadState, saveState, type BudgetCategory, type BudgetState, newId } from "../lib/storage";
+import { loadState, newId, saveState, type BudgetState } from "../lib/storage";
 import { useHydrated } from "../lib/useHydrated";
 import { handleNumberArrowStep } from "../lib/numberInput";
+import { money } from "../lib/currency";
+
+type LedgerBudgetRow = {
+  id: string;
+  name: string;
+  mode: "percent" | "fixed";
+  value: number;
+};
+
+function deriveRows(state: BudgetState): LedgerBudgetRow[] {
+  const percentRows = state.budgetCategories.map((item) => ({
+    id: item.id,
+    name: item.name,
+    mode: "percent" as const,
+    value: item.percent,
+  }));
+  const fixedRows = state.allocations
+    .filter((item) => item.mode === "fixed")
+    .map((item) => ({ id: item.id, name: item.name, mode: "fixed" as const, value: item.value }));
+  return [...percentRows, ...fixedRows];
+}
+
+function applyRows(state: BudgetState, rows: LedgerBudgetRow[]) {
+  return {
+    ...state,
+    budgetCategories: rows
+      .filter((item) => item.mode === "percent")
+      .map((item) => ({ id: item.id, name: item.name, percent: Math.max(0, item.value) })),
+    allocations: rows
+      .filter((item) => item.mode === "fixed")
+      .map((item) => ({ id: item.id, name: item.name, mode: "fixed" as const, value: Math.max(0, item.value) })),
+  };
+}
 
 export default function BudgetPage() {
   const hydrated = useHydrated();
   const [state, setState] = useState<BudgetState | null>(null);
+  const [draft, setDraft] = useState<LedgerBudgetRow>({ id: newId(), name: "", mode: "percent", value: 0 });
 
   useEffect(() => {
     if (!hydrated) return;
@@ -19,295 +53,159 @@ export default function BudgetPage() {
     saveState(state);
   }, [hydrated, state]);
 
-  const totals = useMemo(() => {
-    if (!state) return { percent: 0, fixed: 0 };
-    const percent = state.budgetCategories.reduce((sum, c) => sum + (Number(c.percent) || 0), 0);
-    const fixed = state.allocations
-      .filter((item) => item.mode === "fixed")
-      .reduce((sum, item) => sum + (Number(item.value) || 0), 0);
-    return { percent, fixed };
-  }, [state]);
+  const rows = useMemo(() => (state ? deriveRows(state) : []), [state]);
+  const percentTotal = rows.filter((item) => item.mode === "percent").reduce((sum, item) => sum + item.value, 0);
+  const fixedTotal = rows.filter((item) => item.mode === "fixed").reduce((sum, item) => sum + item.value, 0);
+
+  function commit(nextRows: LedgerBudgetRow[]) {
+    setState((current) => {
+      if (!current) return current;
+      return applyRows(current, nextRows);
+    });
+  }
+
+  function updateRow(id: string, patch: Partial<LedgerBudgetRow>) {
+    commit(rows.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  }
+
+  function addRow() {
+    const name = draft.name.trim();
+    if (!name) return;
+    commit([...rows, { ...draft, id: newId(), name, value: Math.max(0, Number(draft.value) || 0) }]);
+    setDraft({ id: newId(), name: "", mode: "percent", value: 0 });
+  }
 
   if (!hydrated || !state) {
     return (
-      <section className="stack">
-        <header className="pageHeader">
-          <h1 className="h1">Budget</h1>
-          <p className="muted">Loading…</p>
+      <section className="ledgerPage">
+        <header className="pageIntro collageRuled">
+          <p className="kicker">Budget</p>
+          <h1 className="h1">Budget ledger</h1>
+          <p className="muted">Loading budget categories...</p>
         </header>
-        <div className="card" aria-busy="true">
-          <p className="muted">Preparing budget…</p>
-        </div>
       </section>
     );
   }
 
-  const updateCategory = (id: string, patch: Partial<BudgetCategory>) => {
-    setState((s) => {
-      if (!s) return s;
-      return {
-        ...s,
-        budgetCategories: s.budgetCategories.map((c) => (c.id === id ? { ...c, ...patch } : c)),
-      };
-    });
-  };
-
-  const updatePercent = (id: string, value: number) => {
-    setState((s) => {
-      if (!s) return s;
-      const categories = s.budgetCategories;
-      const current = categories.find((c) => c.id === id);
-      const currentValue = Number(current?.percent || 0);
-      const total = categories.reduce((sum, c) => sum + (Number(c.percent) || 0), 0);
-      const remaining = 100 - (total - currentValue);
-      const next = Math.max(0, Math.min(value, remaining));
-
-      return {
-        ...s,
-        budgetCategories: categories.map((c) => (c.id === id ? { ...c, percent: next } : c)),
-      };
-    });
-  };
-
-  const addCategory = () => {
-    setState((s) => {
-      if (!s) return s;
-      return {
-        ...s,
-        budgetCategories: [
-          ...s.budgetCategories,
-          {
-            id: newId(),
-            name: "New category",
-            percent: 0,
-          },
-        ],
-      };
-    });
-  };
-
-  const removeCategory = (id: string) => {
-    setState((s) => {
-      if (!s) return s;
-      return {
-        ...s,
-        budgetCategories: s.budgetCategories.filter((c) => c.id !== id),
-      };
-    });
-  };
-
-  const fixedItems = state.allocations.filter((item) => item.mode === "fixed");
-
-  const updateFixedItem = (id: string, patch: { name?: string; value?: number }) => {
-    setState((s) => {
-      if (!s) return s;
-      return {
-        ...s,
-        allocations: s.allocations.map((item) =>
-          item.id === id && item.mode === "fixed"
-            ? {
-                ...item,
-                ...(typeof patch.name === "string" ? { name: patch.name } : {}),
-                ...(typeof patch.value === "number" ? { value: Math.max(0, patch.value) } : {}),
-              }
-            : item,
-        ),
-      };
-    });
-  };
-
-  const addFixedItem = () => {
-    setState((s) => {
-      if (!s) return s;
-      return {
-        ...s,
-        allocations: [
-          ...s.allocations,
-          {
-            id: newId(),
-            name: "One-time item",
-            mode: "fixed",
-            value: 0,
-          },
-        ],
-      };
-    });
-  };
-
-  const removeFixedItem = (id: string) => {
-    setState((s) => {
-      if (!s) return s;
-      return {
-        ...s,
-        allocations: s.allocations.filter((item) => item.id !== id),
-      };
-    });
-  };
-
-
   return (
-    <section className="stack">
-      <header className="pageHeader">
-        <h1 className="h1">Budget</h1>
-        <p className="muted">
-          Percentage categories are tracked against 100%. Fixed items are tracked separately as flat dollars per paycheck.
-        </p>
+    <section className="ledgerPage">
+      <header className="pageIntro collageRuled">
+        <p className="kicker">Budget</p>
+        <h1 className="h1">Budget ledger</h1>
+        <p className="muted">Percentage and fixed plans now live in one ruled table that mirrors onboarding step three.</p>
       </header>
 
-      <div className="card">
-        <div className="cardHeader">
-          <h2 className="h2" style={{ margin: 0 }}>
-            Categories
-          </h2>
-          <button className="button" type="button" onClick={addCategory}>
-            Add Category
-          </button>
-        </div>
+      <section className="dashboardStats">
+        <article className="statCard collageRuled">
+          <p className="statLabel">Percent Planned</p>
+          <p className="stat">{percentTotal.toFixed(0)}%</p>
+        </article>
+        <article className="statCard collageRuled">
+          <p className="statLabel">Fixed Planned</p>
+          <p className="stat">{money(fixedTotal)}</p>
+        </article>
+        <article className="statCard collageRuled">
+          <p className="statLabel">Status</p>
+          <p className="stat">{percentTotal <= 100 ? "In Balance" : "Overdrawn"}</p>
+        </article>
+      </section>
 
-        <div style={{ overflowX: "auto", marginTop: 10 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <section className="ledgerCard collageRuled">
+        <div className="cardHeader">
+          <h2 className="h2">Budget entries</h2>
+          <span className="sheetCaption">Use Percent or Fixed $ exactly as in onboarding.</span>
+        </div>
+        <div className="ledgerTableWrap">
+          <table className="ledgerTable">
             <thead>
               <tr>
-                {["Item", "Percentage", ""].map((h) => (
-                  <th key={h} style={{ textAlign: "left", padding: 10, borderBottom: "1px solid var(--line)" }}>
-                    {h}
-                  </th>
-                ))}
+                <th>Category</th>
+                <th>Type</th>
+                <th>Value</th>
+                <th className="colTight" />
               </tr>
             </thead>
             <tbody>
-              {state.budgetCategories.length === 0 ? (
-                <tr>
-                  <td colSpan={3} style={{ padding: 12 }}>
-                    <p className="muted">No categories yet. Add your first one to get started.</p>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td>
+                    <input className="input" value={row.name} onChange={(e) => updateRow(row.id, { name: e.target.value })} />
+                  </td>
+                  <td>
+                    <select
+                      className="input"
+                      value={row.mode}
+                      onChange={(e) => updateRow(row.id, { mode: e.target.value === "fixed" ? "fixed" : "percent" })}
+                    >
+                      <option value="percent">Percent</option>
+                      <option value="fixed">Fixed $</option>
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      className="input"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="1"
+                      value={row.value}
+                      onKeyDown={handleNumberArrowStep}
+                      onChange={(e) => updateRow(row.id, { value: Math.max(0, Number(e.target.value || 0)) })}
+                    />
+                  </td>
+                  <td className="colTight">
+                    <button
+                      className="button ghost deleteButton"
+                      type="button"
+                      aria-label={`Delete ${row.name}`}
+                      onClick={() => commit(rows.filter((item) => item.id !== row.id))}
+                    >
+                      ×
+                    </button>
                   </td>
                 </tr>
-              ) : (
-                state.budgetCategories.map((c) => {
-                  return (
-                    <tr key={c.id}>
-                      <td style={{ padding: 10, borderBottom: "1px solid var(--line)" }}>
-                        <input
-                          className="input"
-                          type="text"
-                          value={c.name}
-                          onChange={(e) => updateCategory(c.id, { name: e.target.value })}
-                          placeholder="Spending, Groceries, Savings…"
-                        />
-                      </td>
-                      <td style={{ padding: 10, borderBottom: "1px solid var(--line)", width: 160 }}>
-                        <div className="row" style={{ alignItems: "center", flexWrap: "nowrap" }}>
-                          <input
-                            className="input"
-                            type="number"
-                            inputMode="decimal"
-                            min="0"
-                            step="1"
-                            value={c.percent}
-                            onKeyDown={handleNumberArrowStep}
-                            onChange={(e) => updatePercent(c.id, Number(e.target.value || 0))}
-                          />
-                          <span className="muted">%</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: 10, borderBottom: "1px solid var(--line)", width: 1 }}>
-                        <button className="button ghost" type="button" onClick={() => removeCategory(c.id)}>
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-            <tfoot>
+              ))}
               <tr>
-                <td style={{ padding: 10, borderTop: "1px solid var(--line)", fontWeight: 700 }}>Total</td>
-                <td style={{ padding: 10, borderTop: "1px solid var(--line)", fontWeight: 700 }}>
-                  {totals.percent.toFixed(2)}%
+                <td>
+                  <input
+                    className="input"
+                    placeholder="+ Add new category..."
+                    value={draft.name}
+                    onChange={(e) => setDraft((current) => ({ ...current, name: e.target.value }))}
+                  />
                 </td>
-                <td style={{ padding: 10, borderTop: "1px solid var(--line)" }} />
+                <td>
+                  <select
+                    className="input"
+                    value={draft.mode}
+                    onChange={(e) => setDraft((current) => ({ ...current, mode: e.target.value === "fixed" ? "fixed" : "percent" }))}
+                  >
+                    <option value="percent">Percent</option>
+                    <option value="fixed">Fixed $</option>
+                  </select>
+                </td>
+                <td>
+                  <input
+                    className="input"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="1"
+                    value={draft.value}
+                    onKeyDown={handleNumberArrowStep}
+                    onChange={(e) => setDraft((current) => ({ ...current, value: Math.max(0, Number(e.target.value || 0)) }))}
+                  />
+                </td>
+                <td className="colTight">
+                  <button className="button" type="button" onClick={addRow}>
+                    Add
+                  </button>
+                </td>
               </tr>
-            </tfoot>
+            </tbody>
           </table>
         </div>
-      </div>
-
-      <div className="card">
-        <div className="cardHeader">
-          <h2 className="h2" style={{ margin: 0 }}>
-            Fixed Items
-          </h2>
-          <button className="button" type="button" onClick={addFixedItem}>
-            Add Fixed Item
-          </button>
-        </div>
-
-        <div style={{ overflowX: "auto", marginTop: 10 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                {["Item", "Amount", ""].map((h) => (
-                  <th key={h} style={{ textAlign: "left", padding: 10, borderBottom: "1px solid var(--line)" }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {fixedItems.length === 0 ? (
-                <tr>
-                  <td colSpan={3} style={{ padding: 12 }}>
-                    <p className="muted">No fixed items yet. Add one for flat dollar allocations per paycheck.</p>
-                  </td>
-                </tr>
-              ) : (
-                fixedItems.map((item) => (
-                  <tr key={item.id}>
-                    <td style={{ padding: 10, borderBottom: "1px solid var(--line)" }}>
-                      <input
-                        className="input"
-                        type="text"
-                        value={item.name}
-                        onChange={(e) => updateFixedItem(item.id, { name: e.target.value })}
-                        placeholder="Car payment, Debt extra, One-time..."
-                      />
-                    </td>
-                    <td style={{ padding: 10, borderBottom: "1px solid var(--line)", width: 180 }}>
-                      <input
-                        className="input"
-                        type="number"
-                        inputMode="decimal"
-                        min="0"
-                        step="1"
-                        value={item.value}
-                        onKeyDown={handleNumberArrowStep}
-                        onChange={(e) => updateFixedItem(item.id, { value: Number(e.target.value || 0) })}
-                      />
-                    </td>
-                    <td style={{ padding: 10, borderBottom: "1px solid var(--line)", width: 1 }}>
-                      <button className="button ghost" type="button" onClick={() => removeFixedItem(item.id)}>
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td style={{ padding: 10, borderTop: "1px solid var(--line)", fontWeight: 700 }}>Total</td>
-                <td style={{ padding: 10, borderTop: "1px solid var(--line)", fontWeight: 700 }}>
-                  ${totals.fixed.toFixed(2)}
-                </td>
-                <td style={{ padding: 10, borderTop: "1px solid var(--line)" }} />
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
-
+      </section>
     </section>
   );
 }
-  

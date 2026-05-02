@@ -5,41 +5,30 @@ import { useRouter } from "next/navigation";
 import { defaultBudget, loadBudget, newId, saveBudget, type Allocation, type OnboardingExpense, type PayCycle } from "../lib/budgetStorage";
 import { useHydrated } from "../lib/useHydrated";
 import { handleNumberArrowStep } from "../lib/numberInput";
+import { money } from "../lib/currency";
 
-type AllocationDraft = Allocation;
 type ExpenseDraft = OnboardingExpense;
+type AllocationDraft = Allocation;
 
-const starterAllocations: AllocationDraft[] = [
-  { id: newId(), name: "Groceries", mode: "percent", value: 0 },
-  { id: newId(), name: "Gas/Transport", mode: "percent", value: 0 },
-  { id: newId(), name: "Savings", mode: "percent", value: 0 },
-];
-
-const defaultExpenseRow: ExpenseDraft = {
-  id: newId(),
-  name: "",
-  amount: 0,
-  frequency: "monthly",
-};
+function todayIso() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
   const hydrated = useHydrated();
   const [step, setStep] = useState(0);
+  const [incomeSource, setIncomeSource] = useState("Primary income");
   const [paycheckAmount, setPaycheckAmount] = useState(0);
   const [payCycleType, setPayCycleType] = useState<PayCycle>("biweekly");
-  const [expenses, setExpenses] = useState<ExpenseDraft[]>([{ ...defaultExpenseRow }]);
+  const [expenses, setExpenses] = useState<ExpenseDraft[]>([]);
+  const [expenseDraft, setExpenseDraft] = useState<ExpenseDraft>({ id: newId(), name: "", amount: 0, frequency: "monthly" });
   const [allocations, setAllocations] = useState<AllocationDraft[]>([]);
-  const [showStarters, setShowStarters] = useState(false);
-  const [importMessage, setImportMessage] = useState("");
-
-  const todayIso = useMemo(() => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, "0");
-    const d = String(now.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  }, []);
+  const [allocationDraft, setAllocationDraft] = useState<AllocationDraft>({ id: newId(), name: "", mode: "percent", value: 0 });
 
   useEffect(() => {
     if (!hydrated) return;
@@ -50,49 +39,58 @@ export default function OnboardingPage() {
   }, [hydrated, router]);
 
   const monthlyExpenseSubtotal = useMemo(
-    () => expenses.filter((e) => e.frequency === "monthly").reduce((sum, e) => sum + (Number(e.amount) || 0), 0),
+    () => expenses.filter((item) => item.frequency === "monthly").reduce((sum, item) => sum + item.amount, 0),
     [expenses],
   );
 
   const perPaycheckExpenseSubtotal = useMemo(
-    () => expenses.filter((e) => e.frequency === "per-paycheck").reduce((sum, e) => sum + (Number(e.amount) || 0), 0),
+    () => expenses.filter((item) => item.frequency === "per-paycheck").reduce((sum, item) => sum + item.amount, 0),
     [expenses],
   );
 
   const percentTotal = useMemo(
-    () => allocations.filter((a) => a.mode === "percent").reduce((sum, a) => sum + (Number(a.value) || 0), 0),
+    () => allocations.filter((item) => item.mode === "percent").reduce((sum, item) => sum + item.value, 0),
     [allocations],
   );
 
   const fixedTotal = useMemo(
-    () => allocations.filter((a) => a.mode === "fixed").reduce((sum, a) => sum + (Number(a.value) || 0), 0),
+    () => allocations.filter((item) => item.mode === "fixed").reduce((sum, item) => sum + item.value, 0),
     [allocations],
   );
 
-  const canContinueFromIncome = paycheckAmount > 0;
+  const estimatedBillsPerPeriod = perPaycheckExpenseSubtotal + monthlyExpenseSubtotal / 2;
+  const availableAfterBills = Math.max(paycheckAmount - estimatedBillsPerPeriod, 0);
+  const budgetedAmount = Math.max(0, fixedTotal + availableAfterBills * (percentTotal / 100));
+  const balanceProgress = availableAfterBills > 0 ? Math.min((budgetedAmount / availableAfterBills) * 100, 100) : 0;
 
-  const cleanedExpenses = expenses
-    .map((item) => ({
-      ...item,
-      name: item.name.trim(),
-      amount: Math.max(0, Number(item.amount) || 0),
-    }))
-    .filter((item) => item.name.length > 0);
-
-  const cleanedAllocations = allocations
-    .map((item) => ({
-      ...item,
-      name: item.name.trim(),
-      value: Math.max(0, Number(item.value) || 0),
-    }))
-    .filter((item) => item.name.length > 0);
-
-  function addExpenseRow() {
-    setExpenses((prev) => [...prev, { id: newId(), name: "", amount: 0, frequency: "monthly" }]);
+  function addExpense() {
+    const name = expenseDraft.name.trim();
+    if (!name) return;
+    setExpenses((current) => [
+      ...current,
+      {
+        ...expenseDraft,
+        id: newId(),
+        name,
+        amount: Math.max(0, Number(expenseDraft.amount) || 0),
+      },
+    ]);
+    setExpenseDraft({ id: newId(), name: "", amount: 0, frequency: "monthly" });
   }
 
-  function addAllocationRow() {
-    setAllocations((prev) => [...prev, { id: newId(), name: "", mode: "percent", value: 0 }]);
+  function addAllocation() {
+    const name = allocationDraft.name.trim();
+    if (!name) return;
+    setAllocations((current) => [
+      ...current,
+      {
+        ...allocationDraft,
+        id: newId(),
+        name,
+        value: Math.max(0, Number(allocationDraft.value) || 0),
+      },
+    ]);
+    setAllocationDraft({ id: newId(), name: "", mode: "percent", value: 0 });
   }
 
   function completeOnboarding() {
@@ -102,23 +100,29 @@ export default function OnboardingPage() {
       return;
     }
 
-    const budgetCategories = cleanedAllocations
-      .filter((item) => item.mode === "percent")
-      .map((item) => ({
-        id: item.id,
-        name: item.name,
-        percent: Math.max(0, item.value),
-      }));
+    const cleanExpenses = expenses
+      .map((item) => ({ ...item, name: item.name.trim(), amount: Math.max(0, Number(item.amount) || 0) }))
+      .filter((item) => item.name.length > 0);
 
-    const recurringExpenses = cleanedExpenses
+    const cleanAllocations = allocations
+      .map((item) => ({ ...item, name: item.name.trim(), value: Math.max(0, Number(item.value) || 0) }))
+      .filter((item) => item.name.length > 0);
+
+    const budgetCategories = cleanAllocations
+      .filter((item) => item.mode === "percent")
+      .map((item) => ({ id: item.id, name: item.name, percent: item.value }));
+
+    const recurringExpenses = cleanExpenses
       .filter((item) => item.frequency === "monthly")
-      .map((item) => ({
+      .map((item, index) => ({
         id: item.id,
         name: item.name,
         amount: item.amount,
         cadence: "monthly" as const,
-        dueDay: 1,
+        dueDay: index % 2 === 0 ? 1 : 16,
       }));
+
+    const today = todayIso();
 
     saveBudget(
       defaultBudget({
@@ -126,8 +130,8 @@ export default function OnboardingPage() {
           payCycleType,
           paycheckAmount,
         },
-        expenses: cleanedExpenses,
-        allocations: cleanedAllocations,
+        expenses: cleanExpenses,
+        allocations: cleanAllocations,
         meta: {
           onboardingComplete: true,
           version: 1,
@@ -136,15 +140,15 @@ export default function OnboardingPage() {
         payCycle: payCycleType,
         paycheckAmount,
         incomeMonthly: payCycleType === "biweekly" ? (paycheckAmount * 26) / 12 : (paycheckAmount * 24) / 12,
-        lastPaycheckDate: payCycleType === "biweekly" ? todayIso : "",
+        lastPaycheckDate: payCycleType === "biweekly" ? today : "",
         incomes: [
           {
             id: newId(),
-            name: "Primary income",
+            name: incomeSource.trim() || "Primary income",
             amount: paycheckAmount,
             cadence: "monthly",
             payCycle: payCycleType,
-            lastPaycheckDate: payCycleType === "biweekly" ? todayIso : "",
+            lastPaycheckDate: payCycleType === "biweekly" ? today : "",
           },
         ],
         recurringExpenses,
@@ -175,333 +179,295 @@ export default function OnboardingPage() {
     router.replace("/");
   }
 
-  async function importFromFile(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const parsed = JSON.parse(text) as any;
-      const incoming = parsed?.budgetAppV1 ?? parsed;
-      if (!incoming || typeof incoming !== "object") {
-        setImportMessage("Import failed: invalid budget file.");
-        return;
-      }
-
-      saveBudget(incoming);
-      setImportMessage("Import complete. Redirecting...");
-      router.replace("/");
-    } catch {
-      setImportMessage("Import failed: invalid JSON.");
-    } finally {
-      event.target.value = "";
-    }
-  }
-
   if (!hydrated) {
     return (
-      <section className="stack">
-        <header className="pageHeader">
-          <h1 className="h1">Onboarding</h1>
-          <p className="muted">Loading…</p>
+      <section className="ledgerPage">
+        <header className="pageIntro collageRuled">
+          <p className="kicker">Opening Ledger</p>
+          <h1 className="h1">Paper &amp; Ink setup</h1>
+          <p className="muted">Loading your first sheet...</p>
         </header>
       </section>
     );
   }
 
   return (
-    <section className="stack">
-      <header className="pageHeader">
-        <h1 className="h1">First-run setup</h1>
-        <p className="muted">Step {step + 1} of 4</p>
+    <section className="ledgerPage">
+      <header className="pageIntro collageRuled">
+        <div className="ledgerHeader">
+          <div>
+            <p className="kicker">Opening Ledger</p>
+            <h1 className="h1">Three-step onboarding</h1>
+            <p className="muted">Record your income, recurring notations, and budget mix before entering the ledger.</p>
+          </div>
+          <div className="stepRail" aria-label="Onboarding steps">
+            {["Income", "Expenses", "Budget"].map((label, index) => (
+              <span
+                key={label}
+                className={`stepChip ${index === step ? "isActive" : ""} ${index < step ? "isDone" : ""}`.trim()}
+              >
+                {index + 1}. {label}
+              </span>
+            ))}
+          </div>
+        </div>
       </header>
 
       {step === 0 ? (
-        <div className="card">
-          <h2 className="h2">Start with import?</h2>
-          <p className="muted">If you already have a backup file, import it now. Otherwise continue with setup.</p>
-          <div className="row" style={{ marginTop: 12 }}>
-            <label className="button ghost" style={{ cursor: "pointer" }}>
-              Import JSON
-              <input type="file" accept="application/json,.json" onChange={importFromFile} style={{ display: "none" }} />
-            </label>
-            <button className="button" type="button" onClick={() => setStep(1)}>
-              Start setup
-            </button>
+        <section className="ledgerCard collageRuled">
+          <div className="cardHeader">
+            <h2 className="h2">Step 1: Income</h2>
+            <span className="badge">One source to start</span>
           </div>
-          {importMessage ? (
-            <p className="muted" role="status" style={{ marginTop: 10 }}>
-              {importMessage}
-            </p>
-          ) : null}
-        </div>
+          <div className="ledgerTableWrap">
+            <table className="ledgerTable">
+              <thead>
+                <tr>
+                  <th>Source</th>
+                  <th>Amount</th>
+                  <th>Cycle</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <input className="input" value={incomeSource} onChange={(e) => setIncomeSource(e.target.value)} />
+                  </td>
+                  <td>
+                    <input
+                      className="input"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="1"
+                      value={paycheckAmount}
+                      onKeyDown={handleNumberArrowStep}
+                      onChange={(e) => setPaycheckAmount(Math.max(0, Number(e.target.value || 0)))}
+                    />
+                  </td>
+                  <td>
+                    <select className="input" value={payCycleType} onChange={(e) => setPayCycleType(e.target.value as PayCycle)}>
+                      <option value="biweekly">Bi-Weekly</option>
+                      <option value="semimonthly">Semi-Monthly</option>
+                    </select>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       ) : null}
 
       {step === 1 ? (
-        <div className="card">
-          <h2 className="h2">Income</h2>
-          <div className="form">
-            <label htmlFor="paycheck-amount" className="label">
-              How much do you take home each paycheck?
-            </label>
-            <input
-              id="paycheck-amount"
-              className="input"
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="1"
-              required
-              value={paycheckAmount}
-              onKeyDown={handleNumberArrowStep}
-              onChange={(e) => setPaycheckAmount(Math.max(0, Number(e.target.value || 0)))}
-            />
-
-            <fieldset className="field">
-              <legend className="label">Pay cycle</legend>
-              <div className="row">
-                <label className="row">
-                  <input
-                    type="radio"
-                    name="pay-cycle"
-                    checked={payCycleType === "biweekly"}
-                    onChange={() => setPayCycleType("biweekly")}
-                  />
-                  <span>Bi-weekly</span>
-                </label>
-                <label className="row">
-                  <input
-                    type="radio"
-                    name="pay-cycle"
-                    checked={payCycleType === "semimonthly"}
-                    onChange={() => setPayCycleType("semimonthly")}
-                  />
-                  <span>Semi-monthly</span>
-                </label>
-              </div>
-            </fieldset>
+        <section className="ledgerCard collageRuled">
+          <div className="cardHeader">
+            <h2 className="h2">Step 2: Expenses</h2>
+            <span className="sheetCaption">All entry rows follow the 32px ledger line.</span>
           </div>
-        </div>
+          <div className="ledgerTableWrap">
+            <table className="ledgerTable">
+              <thead>
+                <tr>
+                  <th>Notation</th>
+                  <th>Amount</th>
+                  <th>Frequency</th>
+                  <th className="colTight" />
+                </tr>
+              </thead>
+              <tbody>
+                {expenses.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.name}</td>
+                    <td>{money(item.amount)}</td>
+                    <td>{item.frequency === "per-paycheck" ? "Per paycheck" : "Monthly"}</td>
+                    <td className="colTight">
+                      <button
+                        className="button ghost deleteButton"
+                        type="button"
+                        aria-label={`Delete ${item.name}`}
+                        onClick={() => setExpenses((current) => current.filter((row) => row.id !== item.id))}
+                      >
+                        ×
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                <tr>
+                  <td>
+                    <input
+                      className="input"
+                      placeholder="+ Add new notation..."
+                      value={expenseDraft.name}
+                      onChange={(e) => setExpenseDraft((current) => ({ ...current, name: e.target.value }))}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className="input"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="1"
+                      value={expenseDraft.amount}
+                      onKeyDown={handleNumberArrowStep}
+                      onChange={(e) =>
+                        setExpenseDraft((current) => ({ ...current, amount: Math.max(0, Number(e.target.value || 0)) }))
+                      }
+                    />
+                  </td>
+                  <td>
+                    <select
+                      className="input"
+                      value={expenseDraft.frequency}
+                      onChange={(e) =>
+                        setExpenseDraft((current) => ({
+                          ...current,
+                          frequency: e.target.value === "per-paycheck" ? "per-paycheck" : "monthly",
+                        }))
+                      }
+                    >
+                      <option value="monthly">Monthly</option>
+                      <option value="per-paycheck">Per paycheck</option>
+                    </select>
+                  </td>
+                  <td className="colTight">
+                    <button className="button" type="button" onClick={addExpense}>
+                      Add
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="progressMeta">
+            <span className="muted">Monthly: {money(monthlyExpenseSubtotal)}</span>
+            <span className="muted">Per paycheck: {money(perPaycheckExpenseSubtotal)}</span>
+          </div>
+        </section>
       ) : null}
 
       {step === 2 ? (
-        <div className="card">
-          <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-            <h2 className="h2" style={{ margin: 0 }}>
-              Expenses
-            </h2>
-            <button className="button" type="button" onClick={addExpenseRow}>
-              Add row
-            </button>
+        <section className="ledgerCard collageRuled">
+          <div className="cardHeader">
+            <h2 className="h2">Step 3: Budget</h2>
+            <span className="badge">Balance Sheet</span>
+          </div>
+          <div className="ledgerTableWrap">
+            <table className="ledgerTable">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Type</th>
+                  <th>Value</th>
+                  <th className="colTight" />
+                </tr>
+              </thead>
+              <tbody>
+                {allocations.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.name}</td>
+                    <td>{item.mode === "fixed" ? "Fixed $" : "Percent"}</td>
+                    <td>{item.mode === "fixed" ? money(item.value) : `${item.value.toFixed(0)}%`}</td>
+                    <td className="colTight">
+                      <button
+                        className="button ghost deleteButton"
+                        type="button"
+                        aria-label={`Delete ${item.name}`}
+                        onClick={() => setAllocations((current) => current.filter((row) => row.id !== item.id))}
+                      >
+                        ×
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                <tr>
+                  <td>
+                    <input
+                      className="input"
+                      placeholder="+ Add new category..."
+                      value={allocationDraft.name}
+                      onChange={(e) => setAllocationDraft((current) => ({ ...current, name: e.target.value }))}
+                    />
+                  </td>
+                  <td>
+                    <select
+                      className="input"
+                      value={allocationDraft.mode}
+                      onChange={(e) =>
+                        setAllocationDraft((current) => ({
+                          ...current,
+                          mode: e.target.value === "fixed" ? "fixed" : "percent",
+                        }))
+                      }
+                    >
+                      <option value="percent">Percent</option>
+                      <option value="fixed">Fixed $</option>
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      className="input"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="1"
+                      value={allocationDraft.value}
+                      onKeyDown={handleNumberArrowStep}
+                      onChange={(e) =>
+                        setAllocationDraft((current) => ({ ...current, value: Math.max(0, Number(e.target.value || 0)) }))
+                      }
+                    />
+                  </td>
+                  <td className="colTight">
+                    <button className="button" type="button" onClick={addAllocation}>
+                      Add
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
-          <div className="stack" style={{ marginTop: 10 }}>
-            {expenses.map((item) => (
-              <div key={item.id} className="row" style={{ gap: 8, alignItems: "flex-end" }}>
-                <label style={{ flex: 2 }}>
-                  <span className="label">Name</span>
-                  <input
-                    className="input"
-                    type="text"
-                    value={item.name}
-                    onChange={(e) =>
-                      setExpenses((prev) => prev.map((row) => (row.id === item.id ? { ...row, name: e.target.value } : row)))
-                    }
-                  />
-                </label>
-                <label style={{ flex: 1 }}>
-                  <span className="label">Amount</span>
-                  <input
-                    className="input"
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="1"
-                    value={item.amount}
-                    onKeyDown={handleNumberArrowStep}
-                    onChange={(e) =>
-                      setExpenses((prev) =>
-                        prev.map((row) =>
-                          row.id === item.id ? { ...row, amount: Math.max(0, Number(e.target.value || 0)) } : row,
-                        ),
-                      )
-                    }
-                  />
-                </label>
-                <label style={{ flex: 1 }}>
-                  <span className="label">Frequency</span>
-                  <select
-                    className="input"
-                    value={item.frequency}
-                    onChange={(e) =>
-                      setExpenses((prev) =>
-                        prev.map((row) =>
-                          row.id === item.id
-                            ? { ...row, frequency: e.target.value === "per-paycheck" ? "per-paycheck" : "monthly" }
-                            : row,
-                        ),
-                      )
-                    }
-                  >
-                    <option value="monthly">Monthly</option>
-                    <option value="per-paycheck">Per-paycheck</option>
-                  </select>
-                </label>
-                <button
-                  className="button ghost"
-                  type="button"
-                  onClick={() => setExpenses((prev) => prev.filter((row) => row.id !== item.id))}
-                >
-                  Delete
-                </button>
-              </div>
-            ))}
+          <div className="stack">
+            <div className="progressMeta">
+              <span className="muted">Available after bills: {money(availableAfterBills)}</span>
+              <span className="muted">Budgeted: {money(budgetedAmount)}</span>
+              <span className="muted">Percent mix: {percentTotal.toFixed(0)}%</span>
+            </div>
+            <div className="progressBar" aria-label="Balance Sheet progress">
+              <div className="progressFill" style={{ width: `${balanceProgress}%` }} />
+            </div>
+            <p className="muted">
+              {balanceProgress.toFixed(0)}% of your estimated per-period balance sheet is assigned. Fixed plans total{" "}
+              {money(fixedTotal)}.
+            </p>
           </div>
-
-          <div className="row" style={{ marginTop: 10, gap: 24 }}>
-            <p className="muted">Monthly subtotal: ${monthlyExpenseSubtotal.toFixed(2)}</p>
-            <p className="muted">Per-paycheck subtotal: ${perPaycheckExpenseSubtotal.toFixed(2)}</p>
-          </div>
-        </div>
+        </section>
       ) : null}
 
-      {step === 3 ? (
-        <div className="card">
-          <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-            <h2 className="h2" style={{ margin: 0 }}>
-              Allocation
-            </h2>
-            <div className="row" style={{ gap: 8 }}>
-              <button className="button ghost" type="button" onClick={() => setShowStarters((v) => !v)}>
-                {showStarters ? "Hide starters" : "Use starter rows"}
-              </button>
-              <button className="button" type="button" onClick={addAllocationRow}>
-                Add row
-              </button>
-            </div>
-          </div>
-
-          {showStarters ? (
-            <div className="row" style={{ marginTop: 10 }}>
-              <button
-                className="button ghost"
-                type="button"
-                onClick={() =>
-                  setAllocations((prev) => {
-                    const existing = new Set(prev.map((i) => i.name.toLowerCase()));
-                    const additions = starterAllocations
-                      .filter((s) => !existing.has(s.name.toLowerCase()))
-                      .map((s) => ({ ...s, id: newId() }));
-                    return [...prev, ...additions];
-                  })
-                }
-              >
-                Add Groceries, Gas/Transport, Savings
-              </button>
-            </div>
-          ) : null}
-
-          <div className="stack" style={{ marginTop: 10 }}>
-            {allocations.map((item) => (
-              <div key={item.id} className="row" style={{ gap: 8, alignItems: "flex-end" }}>
-                <label style={{ flex: 2 }}>
-                  <span className="label">Category</span>
-                  <input
-                    className="input"
-                    type="text"
-                    value={item.name}
-                    onChange={(e) =>
-                      setAllocations((prev) => prev.map((row) => (row.id === item.id ? { ...row, name: e.target.value } : row)))
-                    }
-                  />
-                </label>
-                <label style={{ flex: 1 }}>
-                  <span className="label">Type</span>
-                  <select
-                    className="input"
-                    value={item.mode}
-                    onChange={(e) =>
-                      setAllocations((prev) =>
-                        prev.map((row) =>
-                          row.id === item.id ? { ...row, mode: e.target.value === "fixed" ? "fixed" : "percent" } : row,
-                        ),
-                      )
-                    }
-                  >
-                    <option value="percent">Percent</option>
-                    <option value="fixed">Fixed dollars</option>
-                  </select>
-                </label>
-                <label style={{ flex: 1 }}>
-                  <span className="label">Value</span>
-                  <input
-                    className="input"
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="1"
-                    value={item.value}
-                    onKeyDown={handleNumberArrowStep}
-                    onChange={(e) =>
-                      setAllocations((prev) =>
-                        prev.map((row) =>
-                          row.id === item.id ? { ...row, value: Math.max(0, Number(e.target.value || 0)) } : row,
-                        ),
-                      )
-                    }
-                  />
-                </label>
-                <button
-                  className="button ghost"
-                  type="button"
-                  onClick={() => setAllocations((prev) => prev.filter((row) => row.id !== item.id))}
-                >
-                  Delete
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="stack" style={{ marginTop: 10 }}>
-            <p className="muted">Allocated total (percent): {percentTotal.toFixed(2)}%</p>
-            {percentTotal > 100 ? <p role="alert">Warning: percent allocations are over 100%.</p> : null}
-            <p className="muted">Allocated total (fixed): ${fixedTotal.toFixed(2)}</p>
-            {fixedTotal > paycheckAmount ? (
-              <p role="alert">Warning: fixed allocations are greater than paycheck amount.</p>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {step > 0 ? (
-        <div className="row" style={{ justifyContent: "space-between" }}>
+      <div className="ledgerCard collageRuled">
+        <div className="cardHeader">
           <button className="button ghost" type="button" onClick={skipForNow}>
             Skip for now
           </button>
-
-          <div className="row" style={{ gap: 8 }}>
-            {step > 1 ? (
-              <button className="button ghost" type="button" onClick={() => setStep((s) => s - 1)}>
+          <div className="sectionActions">
+            {step > 0 ? (
+              <button className="button ghost" type="button" onClick={() => setStep((current) => current - 1)}>
                 Back
               </button>
             ) : null}
-            {step < 3 ? (
-              <button
-                className="button"
-                type="button"
-                onClick={() => setStep((s) => s + 1)}
-                disabled={step === 1 && !canContinueFromIncome}
-              >
+            {step < 2 ? (
+              <button className="button" type="button" onClick={() => setStep((current) => current + 1)} disabled={paycheckAmount <= 0}>
                 Continue
               </button>
             ) : (
-              <button className="button" type="button" onClick={completeOnboarding}>
-                Finish setup
+              <button className="button" type="button" onClick={completeOnboarding} disabled={paycheckAmount <= 0}>
+                Open ledger
               </button>
             )}
           </div>
         </div>
-      ) : null}
+      </div>
     </section>
   );
 }

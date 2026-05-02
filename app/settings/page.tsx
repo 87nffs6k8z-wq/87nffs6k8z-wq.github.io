@@ -14,11 +14,11 @@ function localDateStamp(now: Date) {
 export default function SettingsPage() {
   const [status, setStatus] = useState("");
 
-  const exportData = () => {
+  function exportData() {
     const state = loadBudget() ?? loadState();
     const now = new Date();
     const payload = {
-      app: "Neo Budget",
+      app: "Paper & Ink Ledger",
       format: "budgetApp:v1",
       exportedAt: now.toISOString(),
       budgetAppV1: state,
@@ -26,17 +26,17 @@ export default function SettingsPage() {
 
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `neo-budget-export-${localDateStamp(now)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `paper-ink-ledger-${localDateStamp(now)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
     URL.revokeObjectURL(url);
     setStatus("Export complete.");
-  };
+  }
 
-  const importData = async (event: ChangeEvent<HTMLInputElement>) => {
+  async function importData(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -61,51 +61,61 @@ export default function SettingsPage() {
     } finally {
       event.target.value = "";
     }
-  };
+  }
 
-  const resetOnboarding = () => {
-    const confirmed = window.confirm("Reset all local budget data and start onboarding again?");
+  function resetOnboarding() {
+    const confirmed = window.confirm("Reset all local budget data and reopen onboarding?");
     if (!confirmed) return;
-
     clearBudget();
     window.location.href = "/onboarding";
-  };
+  }
 
   return (
-    <section className="stack">
-      <header className="pageHeader">
-        <h1 className="h1">Settings</h1>
-        <p className="muted">Manage data transfer and onboarding tools.</p>
+    <section className="ledgerPage">
+      <header className="pageIntro collageRuled">
+        <p className="kicker">Settings</p>
+        <h1 className="h1">Archive tools</h1>
+        <p className="muted">Manage exports, imports, and onboarding resets without changing the local storage key.</p>
       </header>
 
-      <div className="card settingsCard">
-        <h2 className="h2">Backup and Restore</h2>
-        <p className="muted">Export your current budget data or import a saved JSON backup.</p>
-        <div className="row settingsActions" style={{ marginTop: 12 }}>
-          <button className="button" type="button" onClick={exportData}>
-            Export JSON
-          </button>
-          <label className="button ghost" style={{ cursor: "pointer" }}>
-            Import JSON
-            <input type="file" accept="application/json,.json" onChange={importData} style={{ display: "none" }} />
-          </label>
-        </div>
-      </div>
+      <section className="settingsGrid">
+        <article className="settingsCard collageRuled">
+          <div className="cardHeader">
+            <h2 className="h2">Backup &amp; restore</h2>
+            <span className="badge">budgetApp:v1</span>
+          </div>
+          <p className="muted">Export your ledger as JSON or import a previous archive into the same local versioned key.</p>
+          <div className="settingsActions">
+            <button className="button" type="button" onClick={exportData}>
+              Export JSON
+            </button>
+            <label className="button ghost" style={{ cursor: "pointer" }}>
+              Import JSON
+              <input className="fileInputHidden" type="file" accept="application/json,.json" onChange={importData} />
+            </label>
+          </div>
+        </article>
 
-      <div className="card settingsCard">
-        <h2 className="h2">Onboarding</h2>
-        <p className="muted">Need to start setup again? This clears local data and reopens first-run setup.</p>
-        <div className="row settingsActions" style={{ marginTop: 12 }}>
-          <button className="button ghost dangerBtn" type="button" onClick={resetOnboarding}>
-            Reset Onboarding
-          </button>
-        </div>
-      </div>
+        <article className="settingsCard collageRuled">
+          <div className="cardHeader">
+            <h2 className="h2">Onboarding reset</h2>
+            <span className="sheetCaption">Clears local data and returns to the three-step flow.</span>
+          </div>
+          <p className="muted">Use this only if you want to restart the ledger from a blank state on this device.</p>
+          <div className="settingsActions">
+            <button className="button danger" type="button" onClick={resetOnboarding}>
+              Reset onboarding
+            </button>
+          </div>
+        </article>
+      </section>
 
       {status ? (
-        <p className="muted" role="status">
-          {status}
-        </p>
+        <section className="ledgerCard collageRuled">
+          <p className="muted" role="status">
+            {status}
+          </p>
+        </section>
       ) : null}
     </section>
   );

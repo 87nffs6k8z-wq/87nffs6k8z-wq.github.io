@@ -75,10 +75,8 @@ export function RecurringExpenseForm({
 
   return (
     <div className="card">
-      <div className="cardHeader">
-        <h2 className="h2" style={{ margin: 0 }}>
-          Add Expense
-        </h2>
+      <h2 className="h2">Add Expense</h2>
+      <div className="row sectionActions">
         <button className="button ghost" type="button" onClick={onCancel}>
           Cancel
         </button>
