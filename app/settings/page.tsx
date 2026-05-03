@@ -2,36 +2,28 @@
 
 import { ChangeEvent, useState } from "react";
 import { clearBudget, loadBudget, saveBudget, type BudgetState } from "../lib/budgetStorage";
-import { loadState } from "../lib/storage";
-
-function localDateStamp(now: Date) {
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
+import { todayISO } from "../lib/month";
 
 export default function SettingsPage() {
   const [status, setStatus] = useState("");
 
   function exportData() {
-    const state = loadBudget() ?? loadState();
+    const state = loadBudget();
     const now = new Date();
     const payload = {
       app: "Paper & Ink Ledger",
-      format: "budgetApp:v1",
+      format: "paperInkLedger:v1",
       exportedAt: now.toISOString(),
-      budgetAppV1: state,
+      data: state,
     };
-
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `paper-ink-ledger-${localDateStamp(now)}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `paper-ink-ledger-${todayISO()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
     URL.revokeObjectURL(url);
     setStatus("Export complete.");
   }
@@ -39,22 +31,21 @@ export default function SettingsPage() {
   async function importData(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
-
     try {
       const text = await file.text();
       const parsed: unknown = JSON.parse(text);
       const incoming =
-        typeof parsed === "object" && parsed !== null && "budgetAppV1" in parsed
+        typeof parsed === "object" && parsed !== null && "data" in parsed
+          ? (parsed as { data?: unknown }).data
+          : typeof parsed === "object" && parsed !== null && "budgetAppV1" in parsed
           ? (parsed as { budgetAppV1?: unknown }).budgetAppV1
           : parsed;
-
       if (!incoming || typeof incoming !== "object") {
         setStatus("Import failed: invalid budget file.");
         return;
       }
-
       saveBudget(incoming as BudgetState);
-      setStatus("Import complete. Reloading...");
+      setStatus("Import complete. Reloading…");
       setTimeout(() => window.location.reload(), 300);
     } catch {
       setStatus("Import failed: invalid JSON.");
@@ -71,52 +62,75 @@ export default function SettingsPage() {
   }
 
   return (
-    <section className="ledgerPage">
-      <header className="pageIntro collageRuled">
+    <section className="container">
+      {/* Page head */}
+      <header className="sheet sheet--ledger page-head">
         <p className="kicker">Settings</p>
-        <h1 className="h1">Archive tools</h1>
-        <p className="muted">Manage exports, imports, and onboarding resets without changing the local storage key.</p>
+        <h1 className="page-head__title">Archive tools</h1>
+        <p className="page-head__lead">Manage exports, imports, and onboarding resets without changing the local storage key.</p>
+        <div className="page-head__meta">
+          <div className="page-head__meta-item">
+            <span className="page-head__meta-label">Storage key</span>
+            <span className="page-head__meta-value">paperInkLedger:v1</span>
+          </div>
+        </div>
       </header>
 
-      <section className="settingsGrid">
-        <article className="settingsCard collageRuled">
-          <div className="cardHeader">
-            <h2 className="h2">Backup &amp; restore</h2>
-            <span className="badge">budgetApp:v1</span>
+      {/* Settings cards */}
+      <div className="settings-grid">
+        <div className="sheet settings-card">
+          <div className="row-between mb-3">
+            <div>
+              <p className="kicker">Backup</p>
+              <h2 className="section-title">Backup &amp; restore</h2>
+            </div>
+            <span className="badge">v1</span>
           </div>
           <p className="muted">Export your ledger as JSON or import a previous archive into the same local versioned key.</p>
-          <div className="settingsActions">
-            <button className="button" type="button" onClick={exportData}>
+          <div className="settings-actions">
+            <button className="btn" type="button" onClick={exportData}>
               Export JSON
             </button>
-            <label className="button ghost" style={{ cursor: "pointer" }}>
+            <label className="btn btn--ghost" style={{ cursor: "pointer" }}>
               Import JSON
-              <input className="fileInputHidden" type="file" accept="application/json,.json" onChange={importData} />
+              <input type="file" accept="application/json,.json" onChange={importData} style={{ display: "none" }} />
             </label>
           </div>
-        </article>
+        </div>
 
-        <article className="settingsCard collageRuled">
-          <div className="cardHeader">
-            <h2 className="h2">Onboarding reset</h2>
-            <span className="sheetCaption">Clears local data and returns to the three-step flow.</span>
+        <div className="sheet settings-card">
+          <div className="row-between mb-3">
+            <div>
+              <p className="kicker">Reset</p>
+              <h2 className="section-title">Onboarding reset</h2>
+            </div>
           </div>
-          <p className="muted">Use this only if you want to restart the ledger from a blank state on this device.</p>
-          <div className="settingsActions">
-            <button className="button danger" type="button" onClick={resetOnboarding}>
+          <p className="muted">Clears local data and returns to the three-step flow. Use this only if you want to restart the ledger from a blank state on this device.</p>
+          <div className="settings-actions">
+            <button className="btn btn--danger" type="button" onClick={resetOnboarding}>
               Reset onboarding
             </button>
           </div>
-        </article>
-      </section>
+        </div>
+      </div>
 
-      {status ? (
-        <section className="ledgerCard collageRuled">
-          <p className="muted" role="status">
-            {status}
-          </p>
-        </section>
-      ) : null}
+      {/* Status message */}
+      {status && (
+        <div className="sheet" style={{ padding: "14px 22px" }}>
+          <p className="muted" role="status">{status}</p>
+        </div>
+      )}
+
+      {/* About section */}
+      <div className="sheet" style={{ padding: "20px 28px" }}>
+        <p className="kicker">About</p>
+        <h2 className="section-title mb-3">Paper &amp; Ink Ledger</h2>
+        <p style={{ fontFamily: "var(--font-hand)", fontSize: 17, lineHeight: "28px", color: "var(--ink-2)", maxWidth: "62ch", margin: 0 }}>
+          A budget ledger that feels like writing in a notebook. Income is anchored to paycheck dates;
+          bills are spread across the month; annual costs are set aside automatically.
+          Everything stays on this device — no accounts, no sync, no servers.
+        </p>
+      </div>
     </section>
   );
 }

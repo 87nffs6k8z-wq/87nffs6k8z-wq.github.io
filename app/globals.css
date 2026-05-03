@@ -1,22 +1,34 @@
-@import url("https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Kalam:wght@300;400;700&family=Special+Elite&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
 :root {
   color-scheme: light;
-  --bg-start: #fbf9f5;
-  --bg-end: #efeeea;
-  --paper: #ffffff;
-  --paper-shadow: rgba(0, 32, 69, 0.12);
-  --text: #002045;
-  --muted: rgba(0, 32, 69, 0.68);
-  --accent: #4b0002;
-  --line-blue: #e5e7eb;
-  --line-red: #fca5a5;
-  --line-height: 32px;
+
+  /* Paper — warm cream surfaces */
+  --paper-0: #f6efe1;
+  --paper: #fbf6e9;
+  --paper-2: #f0e8d4;
+  --paper-edge: #e0d4b6;
+
+  /* Ink — graphite */
+  --text: #2b2a26;
+  --muted: rgba(43, 42, 38, 0.62);
+  --accent: #b6301f;
+
+  /* Rule lines on paper */
+  --line-blue: rgba(80, 110, 150, 0.20);
+  --line-red: rgba(182, 48, 31, 0.38);
+  --line-height: 28px;
+
+  /* Layout */
   --sheet-width: min(80vw, 1180px);
   --sheet-left: clamp(20px, 7vw, 108px);
-  --sheet-radius: 18px;
-  --ink-shadow: 0 8px 18px rgba(0, 32, 69, 0.18), 0 2px 0 rgba(0, 32, 69, 0.28);
-  --paper-shadow-lg: 0 20px 44px var(--paper-shadow);
+  --sheet-radius: 10px;
+
+  /* Shadows — warm paper feel */
+  --paper-shadow: rgba(60, 45, 20, 0.10);
+  --ink-shadow: 0 2px 4px rgba(60, 45, 20, 0.10), 0 8px 18px rgba(60, 45, 20, 0.10);
+  --paper-shadow-lg: 0 4px 8px rgba(60, 45, 20, 0.10), 0 18px 38px rgba(60, 45, 20, 0.14);
+  --shadow-inset: inset 0 0 0 1px rgba(26, 58, 107, 0.07);
 }
 
 * {
@@ -31,38 +43,16 @@ body {
 body {
   margin: 0;
   color: var(--text);
-  background: radial-gradient(circle at top left, var(--bg-start), var(--bg-end));
-  font-family: "Newsreader", Georgia, serif;
-  font-style: italic;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(255, 255, 255, 0.55) 0, transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(220, 200, 160, 0.18) 0, transparent 50%),
+    var(--paper-0);
+  font-family: "Kalam", "Bradley Hand", cursive;
+  font-size: 17px;
+  line-height: var(--line-height);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   overflow-x: hidden;
-}
-
-body::before,
-body::after {
-  content: "";
-  position: fixed;
-  z-index: 0;
-  pointer-events: none;
-}
-
-body::before {
-  top: 112px;
-  right: clamp(18px, 6vw, 88px);
-  width: 120px;
-  height: 120px;
-  background: linear-gradient(135deg, #fef7c3, #fde68a);
-  box-shadow: 12px 14px 26px rgba(0, 32, 69, 0.1);
-  transform: rotate(8deg);
-}
-
-body::after {
-  top: 220px;
-  right: clamp(54px, 9vw, 132px);
-  width: 26px;
-  height: 44px;
-  border: 3px solid rgba(0, 32, 69, 0.55);
-  border-radius: 16px;
-  transform: rotate(14deg);
 }
 
 a {
@@ -72,7 +62,7 @@ a {
 
 a:hover {
   text-decoration: underline;
-  text-decoration-color: rgba(0, 32, 69, 0.3);
+  text-decoration-color: var(--muted);
 }
 
 button,
@@ -83,8 +73,14 @@ textarea {
 }
 
 :focus-visible {
-  outline: 2px solid rgba(0, 32, 69, 0.28);
+  outline: 2px solid var(--text);
   outline-offset: 2px;
+  border-radius: 3px;
+}
+
+::selection {
+  background: rgba(255, 224, 89, 0.55);
+  color: var(--text);
 }
 
 .skipLink {
@@ -94,7 +90,7 @@ textarea {
   z-index: 100;
   padding: 8px 12px;
   background: var(--paper);
-  border: 1px solid rgba(0, 32, 69, 0.16);
+  border: 1px solid rgba(43, 42, 38, 0.18);
   border-radius: 999px;
   transform: translateY(-200%);
 }
@@ -103,13 +99,23 @@ textarea {
   transform: translateY(0);
 }
 
+/* =========================================================
+   SITE HEADER
+   ========================================================= */
+
 .siteHeader {
   position: sticky;
   top: 0;
   z-index: 40;
-  padding: 18px 0 8px;
-  background: linear-gradient(to bottom, rgba(251, 249, 245, 0.92), rgba(251, 249, 245, 0.7), transparent);
+  padding: 14px 0 18px;
+  background: linear-gradient(
+    to bottom,
+    rgba(246, 239, 225, 0.96) 0,
+    rgba(246, 239, 225, 0.86) 60%,
+    rgba(246, 239, 225, 0)
+  );
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .headerInner,
@@ -127,85 +133,119 @@ textarea {
   gap: 18px;
 }
 
+/* =========================================================
+   TYPOGRAPHY — font-family assignments
+   ========================================================= */
+
+/* Stamp / label / navigation / UI chrome: Special Elite */
 .brand,
 .topNavLink,
 .bottomNavLink,
 .button,
+.rowAction,
 .label,
 .kicker,
-.h1,
-.h2,
 .statLabel,
 .topMeta,
 .footer p,
 .ledgerTable th,
-.rowAction,
+.paperTable th,
 .stepChip,
 .badge,
 .progressMeta,
-.sheetCaption {
-  font-family: "Epilogue", Arial, sans-serif;
+.sheetCaption,
+.bottomNavLabel {
+  font-family: "Special Elite", "Courier New", monospace;
   font-style: normal;
 }
+
+/* Display headings: Caveat handwritten */
+.h1,
+h1,
+.h2,
+h2 {
+  font-family: "Caveat", "Bradley Hand", cursive;
+  font-style: normal;
+}
+
+/* Stat hero values: JetBrains Mono */
+.stat {
+  font-family: "JetBrains Mono", "Menlo", "Consolas", monospace;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* =========================================================
+   BRAND
+   ========================================================= */
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
-  box-shadow: 0 10px 22px rgba(0, 32, 69, 0.08);
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background: transparent;
 }
 
 .brand:hover {
   text-decoration: none;
+  background: rgba(43, 42, 38, 0.06);
 }
 
 .brandMark {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 999px;
   background: var(--accent);
-  box-shadow: 12px 0 0 rgba(0, 32, 69, 0.12);
+  box-shadow:
+    inset -1.5px -1.5px 2.5px rgba(0, 0, 0, 0.3),
+    inset 1px 1px 1.5px rgba(255, 255, 255, 0.35);
 }
 
 .brandText {
-  font-size: 0.84rem;
-  font-weight: 800;
+  font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+  color: var(--text);
 }
+
+/* =========================================================
+   TOP NAV
+   ========================================================= */
 
 .topNav {
   display: none;
   align-items: center;
-  gap: 8px;
+  gap: 2px;
 }
 
 .topNavLink,
 .bottomNavLink {
-  padding: 9px 14px;
-  border-radius: 999px;
+  padding: 8px 14px;
+  border-radius: 3px;
   color: var(--muted);
   border: 1px solid transparent;
-  font-size: 0.84rem;
-  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition: background 120ms;
 }
 
 .topNavLink:hover,
 .bottomNavLink:hover {
   text-decoration: none;
-  border-color: rgba(0, 32, 69, 0.12);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(43, 42, 38, 0.06);
 }
 
 .topNavLink.isActive,
 .bottomNavLink.isActive {
   color: var(--paper);
   background: var(--text);
-  box-shadow: var(--ink-shadow);
 }
+
+/* =========================================================
+   MAIN / PAGE LAYOUT
+   ========================================================= */
 
 .main {
   position: relative;
@@ -215,32 +255,6 @@ textarea {
   padding: 6px 0 110px;
 }
 
-.main::before,
-.main::after {
-  content: "";
-  position: absolute;
-  right: clamp(-78px, -5vw, -32px);
-  pointer-events: none;
-}
-
-.main::before {
-  top: 340px;
-  width: 96px;
-  height: 96px;
-  background: linear-gradient(140deg, #dbeafe, #bfdbfe);
-  transform: rotate(-9deg);
-  box-shadow: 14px 18px 28px rgba(0, 32, 69, 0.08);
-}
-
-.main::after {
-  top: 418px;
-  width: 28px;
-  height: 48px;
-  border: 3px solid rgba(75, 0, 2, 0.52);
-  border-radius: 18px;
-  transform: rotate(-10deg);
-}
-
 .footer {
   padding: 0 0 96px;
 }
@@ -248,10 +262,14 @@ textarea {
 .footer p {
   margin: 0;
   color: var(--muted);
-  font-size: 0.76rem;
-  letter-spacing: 0.08em;
+  font-size: 10px;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
 }
+
+/* =========================================================
+   LAYOUT PRIMITIVES
+   ========================================================= */
 
 .stack {
   display: grid;
@@ -261,101 +279,6 @@ textarea {
 .ledgerPage {
   display: grid;
   gap: 22px;
-}
-
-.pageIntro {
-  display: grid;
-  gap: 10px;
-  padding: 24px 28px;
-}
-
-.pageIntro,
-.ledgerCard,
-.widgetCard,
-.statCard,
-.settingsCard,
-.ledgerTableWrap,
-.collageRuled {
-  background:
-    linear-gradient(
-      to right,
-      transparent 0,
-      transparent 50px,
-      var(--line-red) 50px,
-      var(--line-red) 52px,
-      transparent 52px,
-      transparent 56px,
-      var(--line-red) 56px,
-      var(--line-red) 58px,
-      transparent 58px
-    ),
-    repeating-linear-gradient(
-      to bottom,
-      var(--paper) 0,
-      var(--paper) calc(var(--line-height) - 1px),
-      var(--line-blue) calc(var(--line-height) - 1px),
-      var(--line-blue) var(--line-height)
-    );
-  background-color: var(--paper);
-  border-radius: var(--sheet-radius);
-  box-shadow: var(--paper-shadow-lg);
-}
-
-.hero,
-.pageHeader,
-.card {
-  display: grid;
-  gap: 10px;
-  padding: 24px 28px;
-}
-
-.kicker {
-  margin: 0;
-  color: var(--accent);
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.h1,
-h1 {
-  margin: 0;
-  color: var(--text);
-  font-size: clamp(2rem, 3vw, 3.25rem);
-  line-height: 1.02;
-  letter-spacing: -0.04em;
-  font-weight: 800;
-}
-
-.h2,
-h2 {
-  margin: 0;
-  color: var(--text);
-  font-size: clamp(1.15rem, 2vw, 1.45rem);
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-  font-weight: 700;
-}
-
-.lead,
-.muted,
-.hint,
-p,
-li,
-td,
-.entryText {
-  margin: 0;
-  font-family: "Newsreader", Georgia, serif;
-  font-style: italic;
-  color: var(--text);
-  font-size: 1.06rem;
-  line-height: var(--line-height);
-}
-
-.muted,
-.hint {
-  color: var(--muted);
 }
 
 .row,
@@ -379,9 +302,8 @@ td,
 
 .topMeta {
   color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-size: 10px;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
 }
 
@@ -393,14 +315,117 @@ td,
 .dashboardStats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  gap: 14px;
 }
+
+/* =========================================================
+   PAPER SURFACE — the ruled card background
+   Applied to .collageRuled and individual card classes
+   ========================================================= */
+
+.pageIntro,
+.ledgerCard,
+.widgetCard,
+.statCard,
+.settingsCard,
+.ledgerTableWrap,
+.collageRuled {
+  background:
+    linear-gradient(
+      to right,
+      transparent 0,
+      transparent 56px,
+      var(--line-red) 56px,
+      var(--line-red) 57px,
+      transparent 57px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--line-height) - 1px),
+      var(--line-blue) calc(var(--line-height) - 1px),
+      var(--line-blue) var(--line-height)
+    ),
+    var(--paper);
+  border-radius: var(--sheet-radius);
+  box-shadow: var(--paper-shadow-lg), var(--shadow-inset);
+}
+
+.pageIntro {
+  display: grid;
+  gap: 10px;
+  padding: 24px 28px 24px 88px;
+}
+
+.hero,
+.pageHeader,
+.card {
+  display: grid;
+  gap: 10px;
+  padding: 24px 28px 24px 88px;
+}
+
+/* =========================================================
+   TYPOGRAPHY SCALE
+   ========================================================= */
+
+.kicker {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: var(--line-height);
+}
+
+.h1,
+h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(40px, 6vw, 64px);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
+
+.h2,
+h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(26px, 3vw, 34px);
+  line-height: 1.05;
+  font-weight: 600;
+}
+
+.lead,
+.muted,
+.hint,
+p,
+li,
+td,
+.entryText {
+  margin: 0;
+  font-family: "Kalam", "Bradley Hand", cursive;
+  color: var(--text);
+  font-size: 17px;
+  line-height: var(--line-height);
+}
+
+.muted,
+.hint {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* =========================================================
+   STAT CARDS
+   ========================================================= */
 
 .statCard,
 .widgetCard,
 .settingsCard,
 .ledgerCard {
-  padding: 18px 22px 22px;
+  padding: 16px 22px 18px;
   position: relative;
 }
 
@@ -410,77 +435,102 @@ td,
 }
 
 .statLabel {
-  color: var(--accent);
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-size: 10px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
 }
 
 .stat {
   margin: 0;
-  font-family: "Epilogue", Arial, sans-serif;
   font-style: normal;
-  font-size: clamp(1.35rem, 2.6vw, 2.1rem);
-  line-height: 1.1;
-  font-weight: 800;
+  font-size: clamp(24px, 2.8vw, 32px);
+  line-height: 1.2;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  margin-top: 4px;
 }
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
 
 .button,
 .rowAction {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 32px;
-  padding: 0 14px;
+  gap: 6px;
+  height: 36px;
+  padding: 0 18px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 3px;
   background: var(--text);
   color: var(--paper);
   cursor: pointer;
   box-shadow: var(--ink-shadow);
-  font-size: 0.84rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-family: "Special Elite", "Courier New", monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition: filter 120ms, transform 80ms;
 }
 
 .button:hover,
 .rowAction:hover {
   text-decoration: none;
-  filter: brightness(1.04);
+  filter: brightness(0.95);
+}
+
+.button:active,
+.rowAction:active {
+  transform: translateY(1px);
 }
 
 .button.ghost,
 .rowAction.ghost {
-  background: rgba(0, 32, 69, 0.08);
+  background: transparent;
   color: var(--text);
   box-shadow: none;
-  border: 1px solid rgba(0, 32, 69, 0.12);
+  border: 1px solid rgba(43, 42, 38, 0.18);
+}
+
+.button.ghost:hover,
+.rowAction.ghost:hover {
+  background: rgba(43, 42, 38, 0.06);
+  filter: none;
 }
 
 .button.danger,
 .rowAction.danger {
   background: var(--accent);
+  box-shadow: none;
 }
 
 .button:disabled {
-  opacity: 0.55;
+  opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* =========================================================
+   FORMS & INPUTS
+   ========================================================= */
 
 .form,
 .field {
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
 .label,
 legend {
-  color: var(--text);
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-family: "Special Elite", "Courier New", monospace;
+  font-style: normal;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
@@ -492,18 +542,29 @@ input[type="month"],
 select,
 textarea {
   width: 100%;
-  min-height: 32px;
   height: 32px;
-  padding: 0 10px;
+  min-height: 32px;
+  padding: 0 4px;
   border: 0;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.82);
+  border-bottom: 1.5px solid rgba(43, 42, 38, 0.40);
+  border-radius: 0;
+  background: transparent;
   color: var(--text);
-  font-family: "Newsreader", Georgia, serif;
-  font-style: italic;
-  font-size: 1rem;
+  font-family: "Kalam", "Bradley Hand", cursive;
+  font-size: 17px;
   line-height: 32px;
-  box-shadow: inset 0 -1px 0 rgba(0, 32, 69, 0.14);
+  outline: none;
+  transition: border-color 120ms;
+}
+
+.input:focus,
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="month"]:focus,
+select:focus {
+  border-bottom-color: var(--text);
+  border-bottom-width: 2px;
 }
 
 textarea {
@@ -511,11 +572,12 @@ textarea {
   height: auto;
   padding-top: 8px;
   line-height: 1.5;
+  border-bottom: 1.5px solid rgba(43, 42, 38, 0.40);
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: rgba(0, 32, 69, 0.34);
+  color: rgba(43, 42, 38, 0.32);
 }
 
 input[type="radio"],
@@ -523,16 +585,37 @@ input[type="checkbox"] {
   accent-color: var(--text);
 }
 
+/* Remove number input spinners */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%232b2a26' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  padding-right: 24px;
+  cursor: pointer;
+}
+
 .fieldset {
-  border: 1px solid rgba(0, 32, 69, 0.1);
-  border-radius: 14px;
+  border: 1px solid rgba(43, 42, 38, 0.14);
+  border-radius: 6px;
   padding: 14px;
 }
 
 .radioRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
 }
 
 .radioLabel {
@@ -541,33 +624,39 @@ input[type="checkbox"] {
   gap: 8px;
   min-height: 32px;
   padding: 0 12px;
-  border: 1px solid rgba(0, 32, 69, 0.1);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.75);
-  font-family: "Epilogue", Arial, sans-serif;
+  border: 1px solid rgba(43, 42, 38, 0.14);
+  border-radius: 3px;
+  background: rgba(43, 42, 38, 0.04);
+  font-family: "Special Elite", "Courier New", monospace;
   font-style: normal;
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
+
+/* =========================================================
+   LEDGER TABLE
+   ========================================================= */
 
 .ledgerTableWrap {
   overflow-x: auto;
-  padding: 0 0 8px;
+  padding: 0 24px 0 64px;
 }
 
 .ledgerTable,
 .paperTable {
   width: 100%;
   border-collapse: collapse;
+  min-width: 480px;
 }
 
 .ledgerTable th,
 .ledgerTable td,
 .paperTable th,
 .paperTable td {
-  height: 32px;
-  min-height: 32px;
-  padding: 0 12px 0 8px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 8px 0 0;
   border-bottom: 1px solid transparent;
   text-align: left;
   vertical-align: middle;
@@ -576,20 +665,27 @@ input[type="checkbox"] {
 
 .ledgerTable th,
 .paperTable th {
-  color: var(--accent);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
+  font-weight: 400;
 }
 
 .ledgerTable td,
 .paperTable td {
   white-space: normal;
-  font-family: "Newsreader", Georgia, serif;
-  font-style: italic;
-  font-size: 1rem;
+  font-family: "Kalam", "Bradley Hand", cursive;
+  font-size: 16px;
   color: var(--text);
+}
+
+.ledgerTable td.mono,
+.paperTable td.mono {
+  font-family: "JetBrains Mono", "Menlo", monospace;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-size: 15px;
+  letter-spacing: -0.01em;
 }
 
 .ledgerTable .input,
@@ -598,82 +694,133 @@ input[type="checkbox"] {
 .paperTable .input,
 .paperTable input,
 .paperTable select {
-  box-shadow: none;
+  border-bottom: 0;
+  height: 28px;
+  font-size: 16px;
   background: transparent;
-  border-radius: 0;
-  padding-left: 0;
+}
+
+.ledgerTable .input:focus,
+.ledgerTable select:focus,
+.paperTable .input:focus,
+.paperTable select:focus {
+  border-bottom: 1.5px solid var(--text);
 }
 
 .colTight {
   width: 1%;
+  padding-left: 8px;
 }
 
 .deleteButton {
   width: 32px;
   min-width: 32px;
+  height: 32px;
   padding: 0;
   font-size: 1rem;
+  border-radius: 3px;
 }
+
+/* =========================================================
+   STEP CHIPS / PROGRESS
+   ========================================================= */
 
 .stepRail {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 4px;
 }
 
 .stepChip {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
+  min-height: 28px;
   padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(0, 32, 69, 0.12);
+  border-radius: 3px;
+  border: 1px solid rgba(43, 42, 38, 0.14);
   color: var(--muted);
-  background: rgba(255, 255, 255, 0.7);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  background: rgba(43, 42, 38, 0.04);
+  font-size: 10px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .stepChip.isActive {
   background: var(--text);
   color: var(--paper);
-  box-shadow: var(--ink-shadow);
 }
 
 .stepChip.isDone {
-  border-color: rgba(75, 0, 2, 0.16);
+  border-color: rgba(182, 48, 31, 0.20);
   color: var(--accent);
 }
 
 .progressBar {
   width: 100%;
-  height: 16px;
-  border-radius: 999px;
-  background: rgba(0, 32, 69, 0.08);
+  height: 14px;
+  border-radius: 3px;
+  background: rgba(43, 42, 38, 0.10);
   overflow: hidden;
 }
 
 .progressFill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent), var(--text));
+  background: var(--text);
 }
+
+/* =========================================================
+   BADGE
+   ========================================================= */
 
 .badge {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   min-height: 24px;
   padding: 0 10px;
-  border-radius: 999px;
-  background: rgba(75, 0, 2, 0.08);
-  color: var(--accent);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  border-radius: 3px;
+  background: rgba(43, 42, 38, 0.08);
+  color: var(--text);
+  font-size: 10px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
+
+.badge.danger {
+  background: rgba(182, 48, 31, 0.12);
+  color: var(--accent);
+}
+
+/* =========================================================
+   STAMP
+   ========================================================= */
+
+.stamp {
+  position: absolute;
+  top: 28px;
+  right: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border: 2.5px solid currentColor;
+  border-radius: 4px;
+  font-family: "Special Elite", "Courier New", monospace;
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  transform: rotate(-4deg);
+  opacity: 0.78;
+  color: #2f6a4a;
+}
+
+.stamp.danger {
+  color: var(--accent);
+}
+
+/* =========================================================
+   MISC TEXT
+   ========================================================= */
 
 .noteList {
   display: grid;
@@ -696,41 +843,32 @@ input[type="checkbox"] {
 
 .recentList {
   display: grid;
-  gap: 8px;
+  gap: 0;
 }
 
 .recentItem {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  min-height: 32px;
+  height: 28px;
   align-items: center;
-  padding: 0 4px 0 0;
-}
-
-.stamp {
-  position: absolute;
-  top: 34px;
-  right: 26px;
-  transform: rotate(-12deg);
-  border: 3px solid rgba(75, 0, 2, 0.65);
-  color: rgba(75, 0, 2, 0.65);
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-family: "Epilogue", Arial, sans-serif;
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  font-family: "Kalam", "Bradley Hand", cursive;
+  font-size: 16px;
+  color: var(--text);
 }
 
 .sheetCaption {
+  font-family: "Special Elite", "Courier New", monospace;
+  font-style: normal;
   color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-size: 10px;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
 }
+
+/* =========================================================
+   SETTINGS
+   ========================================================= */
 
 .settingsGrid {
   display: grid;
@@ -741,16 +879,28 @@ input[type="checkbox"] {
   display: none;
 }
 
+/* =========================================================
+   BOTTOM NAV (mobile)
+   ========================================================= */
+
 .bottomNav {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 50;
-  padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-  background: rgba(251, 249, 245, 0.96);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(0, 32, 69, 0.08);
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .bottomNav {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: rgba(251, 246, 233, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(43, 42, 38, 0.10);
+  }
 }
 
 .bottomNavList {
@@ -759,7 +909,7 @@ input[type="checkbox"] {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+  gap: 2px;
 }
 
 .bottomNavItem {
@@ -769,14 +919,24 @@ input[type="checkbox"] {
 .bottomNavLink {
   display: grid;
   justify-items: center;
-  gap: 4px;
-  min-height: 54px;
-  padding: 8px 6px;
-  border-radius: 16px;
+  align-content: center;
+  gap: 3px;
+  min-height: 52px;
+  padding: 8px 2px 6px;
+  border-radius: 8px;
+  color: var(--muted);
+  transition: background 120ms, color 120ms;
+}
+
+.bottomNavLink.isActive {
+  color: var(--text);
+  background: rgba(43, 42, 38, 0.07);
 }
 
 .bottomNavLabel {
-  font-size: 0.68rem;
+  font-size: 9px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
   line-height: 1;
 }
 
@@ -784,13 +944,13 @@ input[type="checkbox"] {
   display: inline-flex;
 }
 
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
 @media (min-width: 900px) {
   .topNav {
     display: inline-flex;
-  }
-
-  .bottomNav {
-    display: none;
   }
 }
 
@@ -798,13 +958,6 @@ input[type="checkbox"] {
   :root {
     --sheet-width: calc(100vw - 24px);
     --sheet-left: 12px;
-  }
-
-  body::before,
-  body::after,
-  .main::before,
-  .main::after {
-    display: none;
   }
 
   .dashboardStats {
@@ -816,6 +969,17 @@ input[type="checkbox"] {
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .pageIntro,
+  .hero,
+  .pageHeader,
+  .card {
+    padding: 18px 20px 18px 64px;
+  }
+
+  .ledgerTableWrap {
+    padding: 0 16px 0 52px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -824,4 +988,866 @@ input[type="checkbox"] {
     transition: none !important;
     animation: none !important;
   }
+}
+
+/* =========================================================
+   PAPER & INK LEDGER v2 — Design system token aliases
+   These aliases map the prototype's var names to the
+   values already defined above, so new component classes
+   work without touching the existing nav/shell styles.
+   ========================================================= */
+
+:root {
+  --ink-1: #2b2a26;
+  --ink-2: #4a4843;
+  --ink-3: rgba(43, 42, 38, 0.62);
+  --ink-4: rgba(43, 42, 38, 0.32);
+  --paper-1: #fbf6e9;
+  --signal-red: #b6301f;
+  --signal-red-soft: rgba(182, 48, 31, 0.12);
+  --rule: 28px;
+  --surface: #fbf6e9;
+  --surface-sunk: #f0e8d4;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --shadow-paper-sm: 0 1px 2px rgba(60, 45, 20, 0.08), 0 2px 6px rgba(60, 45, 20, 0.06);
+  --shadow-paper-md: 0 2px 4px rgba(60, 45, 20, 0.10), 0 8px 18px rgba(60, 45, 20, 0.10);
+  --shadow-paper-lg: 0 4px 8px rgba(60, 45, 20, 0.10), 0 18px 38px rgba(60, 45, 20, 0.14);
+  --border: rgba(43, 42, 38, 0.18);
+  --border-soft: rgba(43, 42, 38, 0.10);
+  --font-display: "Caveat", "Bradley Hand", cursive;
+  --font-hand: "Kalam", "Bradley Hand", cursive;
+  --font-stamp: "Special Elite", "Courier New", monospace;
+  --font-numerals: "JetBrains Mono", "Menlo", "Consolas", monospace;
+  --rule-blue: rgba(80, 110, 150, 0.20);
+  --rule-margin: rgba(182, 48, 31, 0.38);
+}
+
+/* =========================================================
+   CONTAINER — page content wrapper used by new screens
+   ========================================================= */
+
+.container {
+  display: grid;
+  gap: 22px;
+}
+
+/* =========================================================
+   SHEET — new card surface classes
+   ========================================================= */
+
+.sheet {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-paper-md), var(--shadow-inset);
+  position: relative;
+}
+
+.sheet--ruled {
+  background:
+    repeating-linear-gradient(to bottom,
+      transparent 0,
+      transparent calc(var(--rule) - 1px),
+      var(--rule-blue) calc(var(--rule) - 1px),
+      var(--rule-blue) var(--rule)),
+    var(--surface);
+}
+
+.sheet--ledger {
+  background:
+    linear-gradient(to right,
+      transparent 0, transparent 56px,
+      var(--rule-margin) 56px, var(--rule-margin) 57px,
+      transparent 57px),
+    repeating-linear-gradient(to bottom,
+      transparent 0,
+      transparent calc(var(--rule) - 1px),
+      var(--rule-blue) calc(var(--rule) - 1px),
+      var(--rule-blue) var(--rule)),
+    var(--surface);
+}
+
+/* =========================================================
+   SECTION TITLE / KICKER variants
+   ========================================================= */
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ink-1);
+  margin: 0;
+}
+
+.kicker--ink { color: var(--ink-1); }
+.kicker--red { color: var(--signal-red); }
+
+/* =========================================================
+   STAT ROW + STAT CARD (new classes)
+   ========================================================= */
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 720px) {
+  .stat-row { grid-template-columns: 1fr; gap: 10px; }
+}
+
+.stat__label {
+  font-family: var(--font-stamp);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.stat__value {
+  font-family: var(--font-numerals);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-size: 32px;
+  font-weight: 500;
+  color: var(--ink-1);
+  line-height: 1.2;
+  margin-top: 6px;
+  letter-spacing: -0.01em;
+}
+
+.stat__value--neg { color: var(--signal-red); }
+
+.stat__sub {
+  font-family: var(--font-hand);
+  font-size: 13px;
+  color: var(--ink-3);
+  margin-top: 2px;
+  line-height: 20px;
+}
+
+.stat--accent::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 16px; bottom: 16px;
+  width: 3px;
+  background: var(--ink-1);
+  border-radius: 0 2px 2px 0;
+  opacity: 0.65;
+}
+
+/* =========================================================
+   MONEY INLINE DISPLAY
+   ========================================================= */
+
+.money {
+  font-family: var(--font-numerals);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  letter-spacing: -0.01em;
+  font-weight: 500;
+  color: var(--ink-1);
+}
+.money--neg { color: var(--signal-red); }
+.money--sm { font-size: 13px; line-height: 20px; }
+.money--md { font-size: 17px; line-height: 28px; }
+.money--lg { font-size: 28px; line-height: 36px; }
+
+/* =========================================================
+   BTN — new button class (keeps old .button for nav)
+   ========================================================= */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 3px;
+  font-family: var(--font-stamp);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: filter 120ms, transform 80ms, background 120ms;
+  text-decoration: none;
+  background: var(--ink-1);
+  color: var(--paper-1);
+  box-shadow: var(--shadow-paper-sm);
+}
+.btn:hover { filter: brightness(0.95); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn--ghost {
+  background: transparent;
+  color: var(--ink-1);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+.btn--ghost:hover { background: rgba(43,42,38,0.06); filter: none; }
+.btn--quiet {
+  background: rgba(43,42,38,0.06);
+  color: var(--ink-1);
+  box-shadow: none;
+}
+.btn--danger { background: var(--signal-red); color: var(--paper-1); }
+.btn--icon {
+  padding: 0;
+  width: 32px; height: 32px;
+  background: transparent;
+  color: var(--ink-3);
+  box-shadow: none;
+}
+.btn--icon:hover { background: rgba(43,42,38,0.06); color: var(--ink-1); }
+.btn--lg { height: 44px; padding: 0 24px; font-size: 12px; }
+
+/* =========================================================
+   INPUT / SELECT / FIELD (mono variant + field labels)
+   ========================================================= */
+
+.input--mono {
+  font-family: var(--font-numerals) !important;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-size: 16px !important;
+  letter-spacing: -0.01em;
+}
+
+.field__label {
+  font-family: var(--font-stamp);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.field__hint {
+  font-family: var(--font-hand);
+  font-size: 13px;
+  color: var(--ink-3);
+  line-height: 20px;
+  margin: 0;
+}
+
+/* =========================================================
+   SEGMENTED CONTROL
+   ========================================================= */
+
+.segment {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px;
+  background: var(--surface-sunk);
+}
+
+.segment__btn {
+  height: 28px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  border-radius: 3px;
+  font-family: var(--font-stamp);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+
+.segment__btn--active {
+  background: var(--ink-1);
+  color: var(--paper-1);
+}
+
+/* =========================================================
+   BADGE variants
+   ========================================================= */
+
+.badge--red { background: var(--signal-red-soft); color: var(--signal-red); }
+.badge--paid { background: rgba(47,106,74,0.14); color: #2f6a4a; }
+
+/* =========================================================
+   STAMP — override old absolute position, add variants
+   ========================================================= */
+
+.stamp {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border: 2.5px solid currentColor;
+  border-radius: 4px;
+  font-family: var(--font-stamp);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  transform: rotate(-4deg);
+  opacity: 0.78;
+  color: var(--ink-1);
+}
+.stamp--paid     { color: #2f6a4a; }
+.stamp--overdue,
+.stamp--danger   { color: var(--signal-red); }
+.stamp--audited  { color: var(--ink-1); }
+
+/* =========================================================
+   LEDGER TABLE (new class names)
+   ========================================================= */
+
+.ledger-table-wrap {
+  background:
+    linear-gradient(to right, transparent 0, transparent 40px, var(--rule-margin) 40px, var(--rule-margin) 41px, transparent 41px),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 27px, var(--rule-blue) 27px, var(--rule-blue) 28px),
+    var(--paper-1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-paper-md), var(--shadow-inset);
+  padding: 0 24px 0 64px;
+  overflow-x: auto;
+}
+
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 480px;
+}
+
+.ledger-table th {
+  font-family: var(--font-stamp);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: left;
+  height: 28px;
+  padding: 0;
+  font-weight: 400;
+  vertical-align: middle;
+}
+
+.ledger-table td {
+  height: 28px;
+  padding: 0;
+  line-height: 28px;
+  vertical-align: middle;
+  font-family: var(--font-hand);
+  font-size: 16px;
+  color: var(--ink-1);
+}
+
+.ledger-table td.mono {
+  font-family: var(--font-numerals);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+.ledger-table td.text-right,
+.ledger-table th.text-right { text-align: right; }
+
+.ledger-table td.text-tight,
+.ledger-table th.text-tight { width: 1px; padding-left: 8px; }
+
+.ledger-table tr.struck td:not(.notstruck) {
+  color: var(--ink-3);
+  text-decoration: line-through;
+  text-decoration-color: var(--ink-3);
+}
+
+.ledger-table .input,
+.ledger-table .select {
+  border-bottom: 0;
+  height: 28px;
+  font-size: 16px;
+  background: transparent;
+}
+
+.ledger-table .input:focus,
+.ledger-table .select:focus {
+  border-bottom: 1.5px solid var(--ink-1);
+}
+
+/* =========================================================
+   RECENT LIST (new class names)
+   ========================================================= */
+
+.recent-list {
+  display: grid;
+  gap: 0;
+  margin-top: 8px;
+}
+
+.recent-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 28px;
+  font-family: var(--font-hand);
+  font-size: 16px;
+  color: var(--ink-1);
+}
+
+.recent-item__name { /* used for styling when paid */ }
+
+.recent-item__date {
+  font-family: var(--font-numerals);
+  font-size: 14px;
+  color: var(--ink-3);
+}
+
+.recent-item--paid { color: var(--ink-3); }
+.recent-item--paid .recent-item__name { text-decoration: line-through; }
+
+/* =========================================================
+   PERIOD GRID + PERIOD CARD
+   ========================================================= */
+
+.period-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 900px) {
+  .period-grid { grid-template-columns: 1fr; }
+}
+
+.period-card {
+  padding: 20px 28px 24px 64px;
+  position: relative;
+}
+
+@media (max-width: 720px) {
+  .period-card { padding: 18px 20px 20px 52px; }
+}
+
+.period-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.period-card__head h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 30px;
+  line-height: 1;
+  margin: 0;
+  color: var(--ink-1);
+}
+
+.period-card__inline-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.period-card__inline-stat .stat__label { font-size: 9px; }
+.period-card__inline-stat .stat__value { font-size: 19px; margin-top: 2px; line-height: 1.2; }
+
+/* Clickable stat tab variant */
+.period-card__tab {
+  all: unset;
+  display: block;
+  box-sizing: border-box;
+  cursor: pointer;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(43,42,38,0.04);
+  border: 2px solid transparent;
+  transition: background 100ms;
+  text-align: left;
+  width: 100%;
+}
+.period-card__tab:hover { background: rgba(43,42,38,0.08); }
+.period-card__tab--active {
+  background: rgba(43,42,38,0.10) !important;
+  border-color: var(--ink-1);
+}
+.period-card__tab:focus-visible {
+  outline: 2px solid var(--ink-1);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   PAGE HEAD
+   ========================================================= */
+
+.page-head {
+  position: relative;
+  padding: 20px 28px 22px 88px;
+}
+
+@media (max-width: 720px) {
+  .page-head { padding: 18px 20px 18px 64px; }
+}
+
+.page-head__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.page-head__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(40px, 6vw, 64px);
+  line-height: 1;
+  margin: 4px 0 0;
+  color: var(--ink-1);
+  letter-spacing: -0.01em;
+}
+
+.page-head__lead {
+  margin: 6px 0 0;
+  font-family: var(--font-hand);
+  font-size: 17px;
+  line-height: 28px;
+  color: var(--ink-2);
+  max-width: 56ch;
+}
+
+.page-head__meta {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.page-head__meta-item {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 4px 12px;
+  border-left: 1px solid var(--border-soft);
+}
+
+.page-head__meta-item:first-child { border-left: 0; padding-left: 0; }
+
+.page-head__meta-label {
+  font-family: var(--font-stamp);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+
+.page-head__meta-value {
+  font-family: var(--font-numerals);
+  font-size: 15px;
+  color: var(--ink-1);
+  font-weight: 500;
+}
+
+/* =========================================================
+   ONBOARDING
+   ========================================================= */
+
+.onboarding-stage {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+}
+
+.onboarding-card {
+  width: min(100%, 720px);
+  padding: 32px 40px 36px 88px;
+  position: relative;
+}
+
+@media (max-width: 720px) {
+  .onboarding-card { padding: 28px 24px 28px 64px; }
+}
+
+.onboarding-step-meta {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-family: var(--font-stamp);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 4px;
+}
+
+.onboarding-step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(43,42,38,0.18);
+}
+
+.onboarding-step-dot--active { background: var(--ink-1); }
+.onboarding-step-dot--done  { background: rgba(43,42,38,0.55); }
+
+/* =========================================================
+   BILLS CALENDAR
+   ========================================================= */
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: rgba(43,42,38,0.08);
+  border: 1px solid rgba(43,42,38,0.10);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.calendar__head {
+  background: var(--surface-sunk);
+  text-align: center;
+  padding: 6px 0;
+  font-family: var(--font-stamp);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.calendar__day {
+  background: var(--paper-1);
+  min-height: 78px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+
+.calendar__day--out { background: var(--surface-sunk); opacity: 0.55; }
+
+.calendar__day--today .calendar__num {
+  background: var(--ink-1);
+  color: var(--paper-1);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+}
+
+.calendar__num {
+  font-family: var(--font-numerals);
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 22px;
+  height: 22px;
+  text-align: left;
+}
+
+.calendar__entries { display: grid; gap: 2px; }
+
+.calendar__entry {
+  font-family: var(--font-hand);
+  font-size: 11px;
+  line-height: 14px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: rgba(43,42,38,0.06);
+  color: var(--ink-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar__entry--paid { background: rgba(47,106,74,0.10); color: #2f6a4a; text-decoration: line-through; }
+.calendar__entry--overdue { background: var(--signal-red-soft); color: var(--signal-red); font-weight: 500; }
+.calendar__entry--income { background: rgba(43,42,38,0.10); color: var(--ink-1); font-family: var(--font-numerals); font-size: 11px; font-weight: 500; }
+
+@media (max-width: 720px) {
+  .calendar__day { min-height: 56px; padding: 4px 5px; }
+  .calendar__entry { font-size: 10px; padding: 1px 4px; }
+  .calendar__num { font-size: 11px; }
+}
+
+/* =========================================================
+   PAYCHECK TIMELINE
+   ========================================================= */
+
+.timeline {
+  position: relative;
+  padding: 24px 0 14px;
+}
+
+.timeline__rail {
+  position: relative;
+  height: 2px;
+  background: rgba(43,42,38,0.18);
+  margin: 0 14px;
+}
+
+.timeline__tick {
+  position: absolute;
+  top: -6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--paper-1);
+  border: 2px solid var(--ink-1);
+  transform: translateX(-50%);
+}
+
+.timeline__tick--income { background: var(--ink-1); }
+.timeline__tick--bill   { background: var(--paper-1); border-color: var(--signal-red); }
+.timeline__tick--paid   { background: rgba(47,106,74,0.6); border-color: #2f6a4a; }
+
+.timeline__lbl {
+  position: absolute;
+  top: 14px;
+  font-family: var(--font-stamp);
+  font-size: 9px;
+  letter-spacing: 0.10em;
+  color: var(--ink-3);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.timeline__legend {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 38px;
+  font-family: var(--font-stamp);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.timeline__legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* =========================================================
+   ALLOCATION RING + BARS
+   ========================================================= */
+
+.ring-wrap {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 28px;
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .ring-wrap { grid-template-columns: 1fr; }
+}
+
+.allocation-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--border-soft);
+}
+.allocation-row:last-child { border-bottom: 0; }
+
+.allocation-bar {
+  flex: 1;
+  height: 14px;
+  background: var(--surface-sunk);
+  border-radius: var(--radius-sm);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+}
+
+.allocation-bar__fill {
+  height: 100%;
+  background: var(--ink-1);
+  position: relative;
+}
+.allocation-bar__fill--over { background: var(--signal-red); }
+
+.allocation-name {
+  font-family: var(--font-hand);
+  font-size: 17px;
+  color: var(--ink-1);
+  width: 140px;
+}
+
+.allocation-amount {
+  font-family: var(--font-numerals);
+  font-feature-settings: "tnum" 1;
+  font-size: 15px;
+  color: var(--ink-1);
+  width: 110px;
+  text-align: right;
+}
+
+/* =========================================================
+   SETTINGS (new class names)
+   ========================================================= */
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 720px) {
+  .settings-grid { grid-template-columns: 1fr; }
+}
+
+.settings-card { padding: 22px 28px; }
+
+.settings-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+/* =========================================================
+   UTILITY / HELPERS
+   ========================================================= */
+
+.section      { margin-bottom: 0; }
+.sparkline    { display: block; }
+.divider      { height: 1px; background: var(--border-soft); margin: 12px 0; }
+.row-between  { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+.gap-sm       { gap: 8px; }
+.mb-3         { margin-bottom: 12px; }
+.mt-2         { margin-top: 8px; }
+.mt-3         { margin-top: 12px; }
+.mt-rule      { margin-top: 28px; }
+
+/* =========================================================
+   INLINE FORM (below ledger table)
+   ========================================================= */
+
+.inline-form {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+  padding: 16px 24px 18px 64px;
+  background: var(--surface-sunk);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+@media (max-width: 720px) {
+  .inline-form { grid-template-columns: 1fr 1fr; padding: 14px 18px 16px; }
+  .inline-form > :last-child { grid-column: 1 / -1; }
+  .ledger-table-wrap { padding: 0 16px 0 52px; }
 }

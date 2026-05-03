@@ -1,47 +1,82 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { loadState, newId, saveState, type BudgetState } from "../lib/storage";
+import { loadState, newId, saveState, type BudgetCategory, type BudgetState } from "../lib/storage";
 import { useHydrated } from "../lib/useHydrated";
-import { handleNumberArrowStep } from "../lib/numberInput";
-import { money } from "../lib/currency";
+import { monthlyIncomeOf } from "../lib/month";
 
-type LedgerBudgetRow = {
-  id: string;
-  name: string;
-  mode: "percent" | "fixed";
-  value: number;
-};
-
-function deriveRows(state: BudgetState): LedgerBudgetRow[] {
-  const percentRows = state.budgetCategories.map((item) => ({
-    id: item.id,
-    name: item.name,
-    mode: "percent" as const,
-    value: item.percent,
-  }));
-  const fixedRows = state.allocations
-    .filter((item) => item.mode === "fixed")
-    .map((item) => ({ id: item.id, name: item.name, mode: "fixed" as const, value: item.value }));
-  return [...percentRows, ...fixedRows];
+function moneyFmt(value: number) {
+  const v = Number(value) || 0;
+  const abs = Math.abs(v);
+  return `${v < 0 ? "−" : ""}$${abs.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function applyRows(state: BudgetState, rows: LedgerBudgetRow[]) {
-  return {
-    ...state,
-    budgetCategories: rows
-      .filter((item) => item.mode === "percent")
-      .map((item) => ({ id: item.id, name: item.name, percent: Math.max(0, item.value) })),
-    allocations: rows
-      .filter((item) => item.mode === "fixed")
-      .map((item) => ({ id: item.id, name: item.name, mode: "fixed" as const, value: Math.max(0, item.value) })),
-  };
+function AllocationRing({
+  segments,
+  total,
+  label,
+  sublabel,
+}: {
+  segments: { name: string; color: string; value: number }[];
+  total: number;
+  label?: string;
+  sublabel?: string;
+}) {
+  const size = 200;
+  const stroke = 22;
+  const r = (size - stroke) / 2;
+  const c = size / 2;
+  const circ = 2 * Math.PI * r;
+  let acc = 0;
+  return (
+    <div style={{ position: "relative", width: size, height: size }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+        <circle cx={c} cy={c} r={r} fill="none" stroke="var(--surface-sunk)" strokeWidth={stroke} />
+        {segments.map((s, i) => {
+          const frac = total > 0 ? s.value / total : 0;
+          const dash = circ * frac;
+          const offset = circ * acc;
+          acc += frac;
+          return (
+            <circle
+              key={i}
+              cx={c} cy={c} r={r}
+              fill="none"
+              stroke={s.color}
+              strokeWidth={stroke}
+              strokeDasharray={`${dash} ${circ - dash}`}
+              strokeDashoffset={-offset}
+              style={{ transition: "stroke-dasharray 300ms" }}
+            />
+          );
+        })}
+      </svg>
+      {(label || sublabel) && (
+        <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", textAlign: "center" }}>
+          <div>
+            {label && (
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 32, lineHeight: 1, color: "var(--ink-1)" }}>
+                {label}
+              </div>
+            )}
+            {sublabel && (
+              <div style={{ fontFamily: "var(--font-stamp)", fontSize: 9, letterSpacing: "0.18em", color: "var(--ink-3)", marginTop: 4, textTransform: "uppercase" }}>
+                {sublabel}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
+
+const COLORS = ["#2b2a26", "#5b5852", "#8a877e", "#b6301f", "#2f6a4a", "#a0522d", "#8b6f47"];
 
 export default function BudgetPage() {
   const hydrated = useHydrated();
   const [state, setState] = useState<BudgetState | null>(null);
-  const [draft, setDraft] = useState<LedgerBudgetRow>({ id: newId(), name: "", mode: "percent", value: 0 });
+  const [draft, setDraft] = useState<Omit<BudgetCategory, "id">>({ name: "", mode: "percent", value: 0 });
 
   useEffect(() => {
     if (!hydrated) return;
@@ -53,159 +88,239 @@ export default function BudgetPage() {
     saveState(state);
   }, [hydrated, state]);
 
-  const rows = useMemo(() => (state ? deriveRows(state) : []), [state]);
-  const percentTotal = rows.filter((item) => item.mode === "percent").reduce((sum, item) => sum + item.value, 0);
-  const fixedTotal = rows.filter((item) => item.mode === "fixed").reduce((sum, item) => sum + item.value, 0);
-
-  function commit(nextRows: LedgerBudgetRow[]) {
-    setState((current) => {
-      if (!current) return current;
-      return applyRows(current, nextRows);
-    });
+  function update(id: string, patch: Partial<BudgetCategory>) {
+    setState((s) => s ? { ...s, budgetCategories: s.budgetCategories.map((c) => (c.id === id ? { ...c, ...patch } : c)) } : s);
   }
 
-  function updateRow(id: string, patch: Partial<LedgerBudgetRow>) {
-    commit(rows.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  function remove(id: string) {
+    setState((s) => s ? { ...s, budgetCategories: s.budgetCategories.filter((c) => c.id !== id) } : s);
   }
 
-  function addRow() {
+  function add() {
     const name = draft.name.trim();
     if (!name) return;
-    commit([...rows, { ...draft, id: newId(), name, value: Math.max(0, Number(draft.value) || 0) }]);
-    setDraft({ id: newId(), name: "", mode: "percent", value: 0 });
+    setState((s) => {
+      if (!s) return s;
+      return {
+        ...s,
+        budgetCategories: [...s.budgetCategories, { id: newId(), name, mode: draft.mode, value: Math.max(0, Number(draft.value) || 0) }],
+      };
+    });
+    setDraft({ name: "", mode: "percent", value: 0 });
   }
+
+  const derived = useMemo(() => {
+    if (!state) return { monthlyIncome: 0, percentTotal: 0, fixedTotal: 0, fixedPct: 0, usedPct: 0, segments: [] };
+    const cats = state.budgetCategories;
+    const monthlyIncome = monthlyIncomeOf(state);
+    const percentTotal = cats.filter((c) => c.mode === "percent").reduce((s, c) => s + c.value, 0);
+    const fixedTotal = cats.filter((c) => c.mode === "fixed").reduce((s, c) => s + c.value, 0);
+    const fixedPct = monthlyIncome > 0 ? (fixedTotal / monthlyIncome) * 100 : 0;
+    const usedPct = percentTotal + fixedPct;
+    const segments = cats.map((c, i) => ({
+      name: c.name,
+      color: COLORS[i % COLORS.length],
+      value: c.mode === "percent" ? c.value : monthlyIncome > 0 ? (c.value / monthlyIncome) * 100 : 0,
+      raw: c,
+    }));
+    return { monthlyIncome, percentTotal, fixedTotal, fixedPct, usedPct, segments };
+  }, [state]);
 
   if (!hydrated || !state) {
     return (
-      <section className="ledgerPage">
-        <header className="pageIntro collageRuled">
+      <section className="container">
+        <header className="sheet sheet--ledger page-head">
           <p className="kicker">Budget</p>
-          <h1 className="h1">Budget ledger</h1>
-          <p className="muted">Loading budget categories...</p>
+          <h1 className="page-head__title">Allocation plan</h1>
+          <p className="page-head__lead">Loading budget categories…</p>
         </header>
       </section>
     );
   }
 
+  const { monthlyIncome, percentTotal, fixedTotal, usedPct, segments } = derived;
+  const cats = state.budgetCategories;
+
   return (
-    <section className="ledgerPage">
-      <header className="pageIntro collageRuled">
+    <section className="container">
+      {/* Page head */}
+      <header className="sheet sheet--ledger page-head">
         <p className="kicker">Budget</p>
-        <h1 className="h1">Budget ledger</h1>
-        <p className="muted">Percentage and fixed plans now live in one ruled table that mirrors onboarding step three.</p>
+        <h1 className="page-head__title">Allocation plan</h1>
+        <p className="page-head__lead">Percentage and fixed plans live in one ruled table. Percentages divide the leftover after fixed dollars.</p>
+        <div className="page-head__meta">
+          <div className="page-head__meta-item">
+            <span className="page-head__meta-label">Monthly income</span>
+            <span className="page-head__meta-value">{moneyFmt(monthlyIncome)}</span>
+          </div>
+          <div className="page-head__meta-item">
+            <span className="page-head__meta-label">Allocated</span>
+            <span className="page-head__meta-value">{usedPct.toFixed(0)}%</span>
+          </div>
+          <div className="page-head__meta-item">
+            <span className="page-head__meta-label">Categories</span>
+            <span className="page-head__meta-value">{cats.length}</span>
+          </div>
+        </div>
       </header>
 
-      <section className="dashboardStats">
-        <article className="statCard collageRuled">
-          <p className="statLabel">Percent Planned</p>
-          <p className="stat">{percentTotal.toFixed(0)}%</p>
+      {/* Stats row */}
+      <div className="stat-row">
+        <article className="sheet stat" style={{ padding: "16px 22px 18px" }}>
+          <div className="stat__label">Percent planned</div>
+          <div className="stat__value">{percentTotal.toFixed(0)}%</div>
         </article>
-        <article className="statCard collageRuled">
-          <p className="statLabel">Fixed Planned</p>
-          <p className="stat">{money(fixedTotal)}</p>
+        <article className="sheet stat" style={{ padding: "16px 22px 18px" }}>
+          <div className="stat__label">Fixed planned</div>
+          <div className="stat__value">{moneyFmt(fixedTotal)}</div>
         </article>
-        <article className="statCard collageRuled">
-          <p className="statLabel">Status</p>
-          <p className="stat">{percentTotal <= 100 ? "In Balance" : "Overdrawn"}</p>
+        <article className="sheet stat stat--accent" style={{ padding: "16px 22px 18px" }}>
+          <div className="stat__label">Status</div>
+          <div className={`stat__value${usedPct > 100 ? " stat__value--neg" : ""}`}>
+            {usedPct <= 100 ? "In balance" : "Overdrawn"}
+          </div>
         </article>
-      </section>
+      </div>
 
-      <section className="ledgerCard collageRuled">
-        <div className="cardHeader">
-          <h2 className="h2">Budget entries</h2>
-          <span className="sheetCaption">Use Percent or Fixed $ exactly as in onboarding.</span>
+      {/* Allocation ring */}
+      <div className="sheet" style={{ padding: "24px 28px" }}>
+        <div className="ring-wrap">
+          <AllocationRing
+            segments={segments}
+            total={Math.max(100, usedPct)}
+            label={`${usedPct.toFixed(0)}%`}
+            sublabel="of monthly income"
+          />
+          <div>
+            <p className="kicker">Distribution</p>
+            <h2 className="section-title mb-3">Where each dollar goes</h2>
+            <div>
+              {segments.map((s, i) => (
+                <div key={i} className="allocation-row">
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, width: 200 }}>
+                    <span style={{ width: 12, height: 12, borderRadius: 2, background: s.color, flexShrink: 0, display: "inline-block" }} />
+                    <span className="allocation-name">{s.name}</span>
+                  </div>
+                  <div className="allocation-bar">
+                    <div
+                      className={`allocation-bar__fill${s.value > 100 ? " allocation-bar__fill--over" : ""}`}
+                      style={{ width: `${Math.min(100, s.value)}%`, background: s.color }}
+                    />
+                  </div>
+                  <span className="allocation-amount">
+                    {s.raw.mode === "percent" ? `${s.raw.value}%` : moneyFmt(s.raw.value)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="ledgerTableWrap">
-          <table className="ledgerTable">
+      </div>
+
+      {/* Budget entries table */}
+      <div className="sheet" style={{ paddingTop: "20px", paddingBottom: 0 }}>
+        <div style={{ padding: "0 28px" }} className="row-between mb-3">
+          <div>
+            <p className="kicker">Categories</p>
+            <h2 className="section-title">Budget entries</h2>
+          </div>
+          <span className={`badge${usedPct > 100 ? " badge--red" : ""}`}>{usedPct.toFixed(0)}% allocated</span>
+        </div>
+
+        <div className="ledger-table-wrap" style={{ borderRadius: "10px 10px 0 0" }}>
+          <table className="ledger-table">
             <thead>
               <tr>
-                <th>Category</th>
-                <th>Type</th>
-                <th>Value</th>
-                <th className="colTight" />
+                <th style={{ width: "40%" }}>Category</th>
+                <th style={{ width: "20%" }}>Type</th>
+                <th className="text-right" style={{ width: "20%" }}>Value</th>
+                <th className="text-right" style={{ width: "15%" }}>Monthly $</th>
+                <th className="text-tight" />
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    <input className="input" value={row.name} onChange={(e) => updateRow(row.id, { name: e.target.value })} />
-                  </td>
-                  <td>
-                    <select
-                      className="input"
-                      value={row.mode}
-                      onChange={(e) => updateRow(row.id, { mode: e.target.value === "fixed" ? "fixed" : "percent" })}
-                    >
-                      <option value="percent">Percent</option>
-                      <option value="fixed">Fixed $</option>
-                    </select>
-                  </td>
-                  <td>
-                    <input
-                      className="input"
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      step="1"
-                      value={row.value}
-                      onKeyDown={handleNumberArrowStep}
-                      onChange={(e) => updateRow(row.id, { value: Math.max(0, Number(e.target.value || 0)) })}
-                    />
-                  </td>
-                  <td className="colTight">
-                    <button
-                      className="button ghost deleteButton"
-                      type="button"
-                      aria-label={`Delete ${row.name}`}
-                      onClick={() => commit(rows.filter((item) => item.id !== row.id))}
-                    >
-                      ×
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              <tr>
-                <td>
-                  <input
-                    className="input"
-                    placeholder="+ Add new category..."
-                    value={draft.name}
-                    onChange={(e) => setDraft((current) => ({ ...current, name: e.target.value }))}
-                  />
-                </td>
-                <td>
-                  <select
-                    className="input"
-                    value={draft.mode}
-                    onChange={(e) => setDraft((current) => ({ ...current, mode: e.target.value === "fixed" ? "fixed" : "percent" }))}
-                  >
-                    <option value="percent">Percent</option>
-                    <option value="fixed">Fixed $</option>
-                  </select>
-                </td>
-                <td>
-                  <input
-                    className="input"
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="1"
-                    value={draft.value}
-                    onKeyDown={handleNumberArrowStep}
-                    onChange={(e) => setDraft((current) => ({ ...current, value: Math.max(0, Number(e.target.value || 0)) }))}
-                  />
-                </td>
-                <td className="colTight">
-                  <button className="button" type="button" onClick={addRow}>
-                    Add
-                  </button>
-                </td>
-              </tr>
+              {cats.map((c) => {
+                const monthly = c.mode === "percent" ? (monthlyIncome * c.value) / 100 : c.value;
+                return (
+                  <tr key={c.id}>
+                    <td>
+                      <input className="input" value={c.name} onChange={(e) => update(c.id, { name: e.target.value })} />
+                    </td>
+                    <td>
+                      <select
+                        className="select"
+                        value={c.mode}
+                        onChange={(e) => update(c.id, { mode: e.target.value as "percent" | "fixed" })}
+                      >
+                        <option value="percent">Percent</option>
+                        <option value="fixed">Fixed $</option>
+                      </select>
+                    </td>
+                    <td className="text-right mono">
+                      <input
+                        className="input input--mono"
+                        type="text"
+                        inputMode="decimal"
+                        value={c.value}
+                        style={{ textAlign: "right" }}
+                        onChange={(e) =>
+                          update(c.id, { value: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) })
+                        }
+                      />
+                    </td>
+                    <td className="text-right mono">{moneyFmt(monthly)}</td>
+                    <td className="text-tight">
+                      <button className="btn btn--icon" type="button" onClick={() => remove(c.id)} aria-label={`Delete ${c.name}`}>
+                        ×
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-      </section>
+
+        {/* Inline add form */}
+        <div className="inline-form">
+          <div className="field">
+            <label className="field__label">New category</label>
+            <input
+              className="input"
+              placeholder="e.g. Travel fund"
+              value={draft.name}
+              onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+            />
+          </div>
+          <div className="field">
+            <label className="field__label">Type</label>
+            <select
+              className="select"
+              value={draft.mode}
+              onChange={(e) => setDraft((d) => ({ ...d, mode: e.target.value as "percent" | "fixed" }))}
+            >
+              <option value="percent">Percent</option>
+              <option value="fixed">Fixed $</option>
+            </select>
+          </div>
+          <div className="field">
+            <label className="field__label">Value</label>
+            <input
+              className="input input--mono"
+              type="text"
+              inputMode="decimal"
+              placeholder="0"
+              value={draft.value || ""}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, value: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) }))
+              }
+            />
+          </div>
+          <button className="btn" type="button" onClick={add} disabled={!draft.name.trim()}>
+            Add
+          </button>
+        </div>
+      </div>
     </section>
   );
 }

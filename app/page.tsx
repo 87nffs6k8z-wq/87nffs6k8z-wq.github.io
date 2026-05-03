@@ -1,95 +1,249 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MonthPicker } from "./components/MonthPicker";
-import { loadState, saveState, type BudgetState, type Income, type RecurringExpense } from "./lib/storage";
-import { currentMonthKey, formatMonthLabel } from "./lib/month";
-import { money } from "./lib/currency";
-import { annualMonthlySetAside } from "./lib/annualSetAside";
+import { loadState, saveState, type BudgetState } from "./lib/storage";
+import {
+  currentMonthKey,
+  formatMonthLabel,
+  formatShortDate,
+  incomeDatesForMonth,
+  monthBounds,
+  paycheckPeriodsForMonth,
+  type PaycheckPeriod,
+  recurringDueDate,
+  shiftMonth,
+  annualSetAside,
+} from "./lib/month";
 import { useHydrated } from "./lib/useHydrated";
 
-type PeriodSummary = {
-  key: string;
-  label: string;
-  totalIncome: number;
-  totalBills: number;
-  leftover: number;
-  notes: { id: string; name: string; dateLabel: string; amount: number }[];
-};
-
-function parseISODate(iso: string): Date | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
-  const [year, month, day] = iso.split("-").map(Number);
-  const date = new Date(year, (month ?? 1) - 1, day ?? 1);
-  if (date.getFullYear() !== year || date.getMonth() !== (month ?? 1) - 1 || date.getDate() !== day) return null;
-  return date;
+function moneyFmt(value: number) {
+  const v = Number(value) || 0;
+  const abs = Math.abs(v);
+  return `${v < 0 ? "−" : ""}$${abs.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function formatDateLabel(year: number, monthIndex: number, day: number) {
-  return new Date(year, monthIndex, day).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+function Money({ value, struck = false }: { value: number; struck?: boolean }) {
+  const v = Number(value) || 0;
+  return (
+    <span
+      className={`money${v < 0 ? " money--neg" : ""}`}
+      style={{ fontSize: 17, textDecoration: struck ? "line-through" : "none", opacity: struck ? 0.55 : 1 }}
+    >
+      {moneyFmt(v)}
+    </span>
+  );
 }
 
-function toISODate(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function Sparkline({ values, width = 220, height = 32 }: { values: number[]; width?: number; height?: number }) {
+  if (!values || values.length < 2) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const step = width / Math.max(values.length - 1, 1);
+  const pts = values
+    .map((v, i) => `${i === 0 ? "M" : "L"}${(i * step).toFixed(1)},${(height - ((v - min) / range) * height).toFixed(1)}`)
+    .join(" ");
+  return (
+    <svg className="sparkline" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+      <path d={pts} fill="none" stroke="var(--ink-1)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
-function monthBounds(monthKey: string) {
-  const [yearValue, monthValue] = monthKey.split("-").map(Number);
-  const year = yearValue ?? new Date().getFullYear();
-  const monthIndex = (monthValue ?? 1) - 1;
-  const lastDay = new Date(year, monthIndex + 1, 0).getDate();
-  return { year, monthIndex, lastDay };
+function Timeline({
+  events,
+  lastDay,
+  todayDay,
+}: {
+  events: { kind: string; day: number; label: string; tooltip: string }[];
+  lastDay: number;
+  todayDay: number | null;
+}) {
+  const sorted = [...events].sort((a, b) => a.day - b.day);
+  return (
+    <div className="timeline">
+      <div className="timeline__rail">
+        {todayDay != null && (
+          <div
+            style={{
+              position: "absolute",
+              left: `${((todayDay - 1) / Math.max(lastDay - 1, 1)) * 100}%`,
+              top: -8, width: 1.5, height: 24,
+              background: "var(--signal-red)",
+              transform: "translateX(-50%)",
+              opacity: 0.6,
+            }}
+            title={`Today: day ${todayDay}`}
+          />
+        )}
+        {sorted.map((e, i) => {
+          const pct = ((e.day - 1) / Math.max(lastDay - 1, 1)) * 100;
+          const cls =
+            e.kind === "income"
+              ? "timeline__tick timeline__tick--income"
+              : e.kind === "paid"
+              ? "timeline__tick timeline__tick--paid"
+              : "timeline__tick timeline__tick--bill";
+          return (
+            <span key={i}>
+              <div className={cls} style={{ left: `${pct}%` }} title={`${e.tooltip}: ${e.label}`} />
+              <div className="timeline__lbl" style={{ left: `${pct}%` }}>{e.day}</div>
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
+type TabKey = "income" | "bills" | "leftover";
 
-function incomeDatesForMonth(income: Income, monthKey: string) {
-  const { year, monthIndex } = monthBounds(monthKey);
+function PeriodCard({
+  period,
+  onTogglePaid,
+}: {
+  period: PaycheckPeriod;
+  onTogglePaid: (expenseId: string, periodId: string) => void;
+}) {
+  const [tab, setTab] = useState<TabKey>("bills");
 
-  if (income.payCycle === "semimonthly") {
-    return [new Date(year, monthIndex, 1), new Date(year, monthIndex, 15)];
-  }
+  const ordinal = ["st", "nd", "rd"][period.index - 1] ?? "th";
+  const kicker = period.total === 1
+    ? "Only paycheck"
+    : `${period.index}${ordinal} paycheck of ${period.total}`;
 
-  const lastPaycheck = parseISODate(income.lastPaycheckDate);
-  if (!lastPaycheck) return [];
+  // All items sorted by date for "leftover" tab
+  const allItems = useMemo(() => {
+    const items = [
+      ...period.incomes.map((i) => ({ ...i, type: "income" as const })),
+      ...period.bills.map((b) => ({ ...b, type: "bill" as const })),
+    ];
+    return items.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [period]);
 
-  const monthStart = new Date(year, monthIndex, 1);
-  const monthEnd = new Date(year, monthIndex + 1, 0);
-  const dates: Date[] = [];
+  return (
+    <div className="sheet sheet--ledger period-card">
+      <div className="period-card__head">
+        <div>
+          <p className="kicker">{kicker}</p>
+          <h3>{period.label}</h3>
+        </div>
+        <div className="row gap-sm">
+          {period.bills.length > 1 && period.bills.every((b) => b.paid) && (
+            <span className="stamp stamp--paid">Audited</span>
+          )}
+          <span className="badge">{period.entryCount} entries</span>
+        </div>
+      </div>
 
-  let cursor = new Date(lastPaycheck);
-  while (cursor > monthStart) {
-    cursor = addDays(cursor, -14);
-  }
-  while (cursor < monthStart) {
-    cursor = addDays(cursor, 14);
-  }
-  while (cursor <= monthEnd) {
-    dates.push(new Date(cursor));
-    cursor = addDays(cursor, 14);
-  }
+      {/* Clickable stat tabs */}
+      <div className="period-card__inline-stats">
+        {(
+          [
+            { key: "income", label: "Income", value: period.totalIncome, neg: false },
+            { key: "bills", label: "Bills", value: period.totalBills, neg: false },
+            { key: "leftover", label: "Leftover", value: period.leftover, neg: period.leftover < 0 },
+          ] as const
+        ).map(({ key, label, value, neg }) => (
+          <button
+            key={key}
+            type="button"
+            className={`period-card__tab period-card__inline-stat${tab === key ? " period-card__tab--active" : ""}`}
+            onClick={() => setTab(key)}
+            aria-pressed={tab === key}
+          >
+            <div className="stat__label">{label}</div>
+            <div className={`stat__value${neg ? " stat__value--neg" : ""}`}>{moneyFmt(value)}</div>
+          </button>
+        ))}
+      </div>
 
-  return dates;
-}
+      {/* List content driven by active tab */}
+      <div className="recent-list">
+        {tab === "income" && (
+          period.incomes.length === 0 ? (
+            <p className="muted" style={{ fontStyle: "italic" }}>No income in this period.</p>
+          ) : (
+            period.incomes.map((inc) => (
+              <div key={inc.id} className="recent-item">
+                <span className="recent-item__name">{inc.name}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span className="recent-item__date">{formatShortDate(inc.date)}</span>
+                  <Money value={inc.amount} />
+                </span>
+              </div>
+            ))
+          )
+        )}
 
-function recurringDueDate(expense: RecurringExpense, monthKey: string) {
-  const { year, monthIndex, lastDay } = monthBounds(monthKey);
+        {tab === "bills" && (
+          period.bills.length === 0 ? (
+            <p className="muted" style={{ fontStyle: "italic" }}>No bills due in this period.</p>
+          ) : (
+            period.bills.map((b) => (
+              <div key={b.id} className={`recent-item${b.paid ? " recent-item--paid" : ""}`}>
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={b.paid}
+                    onChange={() => onTogglePaid(b.expenseId, b.periodId)}
+                    style={{ accentColor: "var(--ink-1)", cursor: "pointer" }}
+                    title={b.paid ? "Mark unpaid" : "Mark paid"}
+                  />
+                  <span className="recent-item__name">{b.name}</span>
+                  {b.cadence === "annual" && (
+                    <span className="badge" style={{ fontSize: 9 }}>annual</span>
+                  )}
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span className="recent-item__date">{formatShortDate(b.date)}</span>
+                  <Money value={b.amount} struck={b.paid} />
+                </span>
+              </div>
+            ))
+          )
+        )}
 
-  if (expense.cadence === "annual") {
-    if (expense.dueMonth !== monthIndex + 1) return null;
-    const dueDay = Math.max(1, Math.min(expense.dueDay ?? 1, lastDay));
-    return new Date(year, monthIndex, dueDay);
-  }
-
-  const dueDay = Math.max(1, Math.min(expense.dueDay ?? 1, lastDay));
-  return new Date(year, monthIndex, dueDay);
+        {tab === "leftover" && (
+          allItems.length === 0 ? (
+            <p className="muted" style={{ fontStyle: "italic" }}>No entries in this period.</p>
+          ) : (
+            allItems.map((item) => {
+              const isIncome = item.type === "income";
+              const isBillPaid = !isIncome && (item as typeof period.bills[0]).paid;
+              return (
+                <div key={item.id} className={`recent-item${isBillPaid ? " recent-item--paid" : ""}`}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {!isIncome && (
+                      <input
+                        type="checkbox"
+                        checked={isBillPaid}
+                        onChange={() => {
+                          const b = item as typeof period.bills[0];
+                          onTogglePaid(b.expenseId, b.periodId);
+                        }}
+                        style={{ accentColor: "var(--ink-1)", cursor: "pointer" }}
+                      />
+                    )}
+                    {isIncome && (
+                      <span style={{ width: 13, display: "inline-block", textAlign: "center", color: "var(--ink-3)", fontSize: 11 }}>↑</span>
+                    )}
+                    <span className={`recent-item__name${isIncome ? " kicker--ink" : ""}`} style={isIncome ? { fontFamily: "var(--font-stamp)", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase" } : {}}>
+                      {item.name}
+                    </span>
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span className="recent-item__date">{formatShortDate(item.date)}</span>
+                    <Money value={isIncome ? item.amount : -(item as typeof period.bills[0]).amount} struck={isBillPaid} />
+                  </span>
+                </div>
+              );
+            })
+          )
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function Home() {
@@ -107,165 +261,180 @@ export default function Home() {
     saveState(state);
   }, [hydrated, state]);
 
-  const summaries = useMemo(() => {
-    if (!state) return [] as PeriodSummary[];
+  // Paycheck-based periods replace the old fixed-half periods
+  const periods = useMemo(() => (state ? paycheckPeriodsForMonth(state, month) : []), [state, month]);
 
-    const { year, monthIndex, lastDay } = monthBounds(month);
-    const periodDefinitions = [
-      { key: "first", label: `${formatDateLabel(year, monthIndex, 1)} - ${formatDateLabel(year, monthIndex, 15)}`, start: 1, end: 15 },
-      {
-        key: "second",
-        label: `${formatDateLabel(year, monthIndex, 16)} - ${formatDateLabel(year, monthIndex, lastDay)}`,
-        start: 16,
-        end: lastDay,
-      },
-    ];
+  const totals = useMemo(
+    () =>
+      periods.reduce(
+        (acc, p) => ({ income: acc.income + p.totalIncome, bills: acc.bills + p.totalBills, leftover: acc.leftover + p.leftover }),
+        { income: 0, bills: 0, leftover: 0 },
+      ),
+    [periods],
+  );
 
-    return periodDefinitions.map((period) => {
-      const totalIncome = state.incomes.reduce((sum, income) => {
-        const amount = incomeDatesForMonth(income, month).reduce((dateSum, date) => {
-          const day = date.getDate();
-          return day >= period.start && day <= period.end ? dateSum + income.amount : dateSum;
-        }, 0);
-        return sum + amount;
-      }, 0);
+  const { lastDay, year, monthIndex } = useMemo(() => monthBounds(month), [month]);
 
-      const notes = state.recurringExpenses
-        .map((expense) => {
-          const dueDate = recurringDueDate(expense, month);
-          if (!dueDate) return null;
-          const day = dueDate.getDate();
-          if (day < period.start || day > period.end) return null;
-          const amount =
-            expense.cadence === "annual" ? annualMonthlySetAside(expense.amount, expense.dueMonth, monthIndex + 1) : expense.amount;
-          return {
-            id: expense.id,
-            name: expense.name,
-            dateLabel: toISODate(dueDate),
-            amount,
-          };
-        })
-        .filter((item): item is NonNullable<typeof item> => item !== null);
+  // Build timeline events from the period data so paid status is consistent
+  const events = useMemo(() => {
+    if (!state) return [];
+    const evts: { kind: string; day: number; label: string; tooltip: string }[] = [];
+    // Income events
+    state.incomes.forEach((inc) => {
+      incomeDatesForMonth(inc, month).forEach((d) => {
+        evts.push({ kind: "income", day: d.getDate(), label: moneyFmt(inc.amount), tooltip: inc.name });
+      });
+    });
+    // Bill events — paid status from the period data
+    const billPaid = new Map<string, boolean>();
+    periods.forEach((p) => p.bills.forEach((b) => billPaid.set(b.expenseId, b.paid)));
+    state.recurringExpenses.forEach((exp) => {
+      const due = recurringDueDate(exp, month);
+      if (!due) return;
+      const paid = billPaid.get(exp.id) ?? false;
+      const amt = exp.cadence === "annual" ? annualSetAside(exp.amount) : exp.amount;
+      evts.push({ kind: paid ? "paid" : "bill", day: due.getDate(), label: moneyFmt(amt), tooltip: exp.name });
+    });
+    return evts;
+  }, [state, month, periods]);
 
-      const totalBills = notes.reduce((sum, item) => sum + item.amount, 0);
+  const dayBalances = useMemo(() => {
+    let running = 0;
+    const out: number[] = [];
+    for (let day = 1; day <= lastDay; day++) {
+      events.filter((e) => e.day === day).forEach((e) => {
+        const n = parseFloat(e.label.replace(/[$,−]/g, ""));
+        if (e.kind === "income") running += n;
+        else running -= n;
+      });
+      out.push(running);
+    }
+    return out;
+  }, [events, lastDay]);
 
+  function togglePaid(expenseId: string, periodId: string) {
+    setState((s) => {
+      if (!s) return s;
       return {
-        key: period.key,
-        label: period.label,
-        totalIncome,
-        totalBills,
-        leftover: totalIncome - totalBills,
-        notes,
+        ...s,
+        recurringExpenses: s.recurringExpenses.map((e) => {
+          if (e.id !== expenseId) return e;
+          const paid = e.paidPeriods ?? [];
+          return { ...e, paidPeriods: paid.includes(periodId) ? paid.filter((p) => p !== periodId) : [...paid, periodId] };
+        }),
       };
     });
-  }, [month, state]);
+  }
 
-  const totals = useMemo(() => {
-    return summaries.reduce(
-      (acc, item) => ({
-        income: acc.income + item.totalIncome,
-        bills: acc.bills + item.totalBills,
-        leftover: acc.leftover + item.leftover,
-      }),
-      { income: 0, bills: 0, leftover: 0 },
-    );
-  }, [summaries]);
+  const today = new Date();
+  const todayIsThisMonth = today.getFullYear() === year && today.getMonth() === monthIndex;
+  const todayDay = todayIsThisMonth ? today.getDate() : null;
 
   if (!hydrated || !state) {
     return (
-      <section className="ledgerPage">
-        <header className="pageIntro collageRuled">
+      <section className="container">
+        <header className="sheet sheet--ledger page-head">
           <p className="kicker">Overview</p>
-          <h1 className="h1">Paycheck periods</h1>
-          <p className="muted">Loading the current ledger...</p>
+          <h1 className="page-head__title">Paycheck periods</h1>
+          <p className="page-head__lead">Loading the current ledger…</p>
         </header>
       </section>
     );
   }
 
   return (
-    <section className="ledgerPage">
-      <header className="pageIntro collageRuled">
-        <div className="ledgerHeader">
-          <div>
-            <p className="kicker">Overview</p>
-            <h1 className="h1">Paycheck periods</h1>
-            <p className="muted">Each ledger section groups income, bills due, and leftover balance inside the selected month.</p>
+    <section className="container">
+      {/* Page head */}
+      <header className="sheet sheet--ledger page-head">
+        <p className="kicker">Overview</p>
+        <h1 className="page-head__title">Paycheck periods</h1>
+        <p className="page-head__lead">
+          Each card represents a paycheck period — income that lands, bills due, and what's left over.
+        </p>
+        <div className="page-head__meta">
+          <div className="page-head__meta-item">
+            <span className="page-head__meta-label">Month</span>
+            <span className="page-head__meta-value">{formatMonthLabel(month)}</span>
           </div>
-          <div className="topMeta">
-            <span>{formatMonthLabel(month)}</span>
-            <span>{state.incomes.length} income sources</span>
-            <span>{state.recurringExpenses.length} bill entries</span>
+          <div className="page-head__meta-item">
+            <span className="page-head__meta-label">Paychecks</span>
+            <span className="page-head__meta-value">{periods.length}</span>
+          </div>
+          <div className="page-head__meta-item">
+            <span className="page-head__meta-label">Bill entries</span>
+            <span className="page-head__meta-value">{state.recurringExpenses.length}</span>
           </div>
         </div>
       </header>
 
-      <section className="ledgerCard collageRuled">
-        <div className="cardHeader">
-          <h2 className="h2">Ledger month</h2>
-          <span className="sheetCaption">Shift the sheet by month to review both half-periods.</span>
+      {/* Month picker */}
+      <div className="sheet sheet--ledger" style={{ padding: "14px 22px 14px 64px" }}>
+        <div className="row-between">
+          <div>
+            <p className="kicker">Ledger month</p>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 32, lineHeight: 1.1, color: "var(--ink-1)" }}>
+              {formatMonthLabel(month)}
+            </div>
+          </div>
+          <div className="row gap-sm">
+            <button className="btn btn--ghost" type="button" onClick={() => setMonth(shiftMonth(month, -1))}>‹ Prev</button>
+            <button className="btn btn--ghost" type="button" onClick={() => setMonth(currentMonthKey())}>Today</button>
+            <button className="btn btn--ghost" type="button" onClick={() => setMonth(shiftMonth(month, 1))}>Next ›</button>
+          </div>
         </div>
-        <MonthPicker value={month} onChange={setMonth} />
-      </section>
+      </div>
 
-      <section className="dashboardStats">
-        <article className="statCard collageRuled">
-          <p className="statLabel">Total Income</p>
-          <p className="stat">{money(totals.income)}</p>
+      {/* Month stats row */}
+      <div className="stat-row">
+        <article className="sheet stat" style={{ padding: "16px 22px 18px" }}>
+          <div className="stat__label">Total income</div>
+          <div className="stat__value">{moneyFmt(totals.income)}</div>
         </article>
-        <article className="statCard collageRuled">
-          <p className="statLabel">Total Bills Due</p>
-          <p className="stat">{money(totals.bills)}</p>
+        <article className="sheet stat" style={{ padding: "16px 22px 18px" }}>
+          <div className="stat__label">Total bills due</div>
+          <div className="stat__value">{moneyFmt(totals.bills)}</div>
         </article>
-        <article className="statCard collageRuled">
-          <p className="statLabel">Leftover Balance</p>
-          <p className="stat">{money(totals.leftover)}</p>
+        <article className="sheet stat stat--accent" style={{ padding: "16px 22px 18px" }}>
+          <div className="stat__label">Month leftover</div>
+          <div className={`stat__value${totals.leftover < 0 ? " stat__value--neg" : ""}`}>{moneyFmt(totals.leftover)}</div>
         </article>
-      </section>
+      </div>
 
-      <section className="periodGrid">
-        {summaries.map((period) => (
-          <article key={period.key} className="widgetCard collageRuled">
-            <div className="periodHeader">
-              <div>
-                <h2 className="h2">{period.label}</h2>
-                <p className="muted">Recent Notations for this paycheck period.</p>
-              </div>
-              <span className="badge">{period.notes.length} entries</span>
+      {/* Cash-flow timeline */}
+      <div className="sheet" style={{ padding: "20px 28px 24px" }}>
+        <div className="row-between mb-3">
+          <div>
+            <p className="kicker">Cash-flow timeline</p>
+            <h2 className="section-title">{formatMonthLabel(month)}</h2>
+          </div>
+          <div className="timeline__legend" style={{ marginTop: 0 }}>
+            <span><span className="timeline__legend-dot" style={{ background: "var(--ink-1)" }} />Income</span>
+            <span>
+              <span className="timeline__legend-dot" style={{ background: "var(--paper-1)", border: "2px solid var(--signal-red)", display: "inline-block" }} />
+              Bill due
+            </span>
+            <span><span className="timeline__legend-dot" style={{ background: "rgba(47,106,74,0.6)" }} />Paid</span>
+          </div>
+        </div>
+        <Timeline events={events} lastDay={lastDay} todayDay={todayDay} />
+        <div className="divider" />
+        <div className="row-between">
+          <div>
+            <span className="page-head__meta-label">End-of-month balance</span>
+            <div style={{ fontFamily: "var(--font-numerals)", fontSize: 22, marginTop: 2, color: "var(--ink-1)" }}>
+              {moneyFmt(dayBalances[dayBalances.length - 1] ?? 0)}
             </div>
+          </div>
+          <Sparkline values={dayBalances.length ? dayBalances : [0, 0]} width={220} height={32} />
+        </div>
+      </div>
 
-            <div className="dashboardStats">
-              <div>
-                <p className="statLabel">Total Income</p>
-                <p className="entryText">{money(period.totalIncome)}</p>
-              </div>
-              <div>
-                <p className="statLabel">Total Bills Due</p>
-                <p className="entryText">{money(period.totalBills)}</p>
-              </div>
-              <div>
-                <p className="statLabel">Leftover Balance</p>
-                <p className="entryText">{money(period.leftover)}</p>
-              </div>
-            </div>
-
-            <div className="recentList" aria-label={`Recent notations for ${period.label}`}>
-              {period.notes.length === 0 ? (
-                <p className="muted">No bills due in this period.</p>
-              ) : (
-                period.notes.map((note) => (
-                  <div key={note.id} className="recentItem">
-                    <span>{note.name}</span>
-                    <span>
-                      {note.dateLabel} · {money(note.amount)}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </article>
+      {/* Paycheck period cards — one per paycheck date */}
+      <div className="period-grid">
+        {periods.map((p) => (
+          <PeriodCard key={p.key} period={p} onTogglePaid={togglePaid} />
         ))}
-      </section>
+      </div>
     </section>
   );
 }

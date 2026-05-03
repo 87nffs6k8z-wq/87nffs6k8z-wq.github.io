@@ -17,6 +17,7 @@ export type RecurringExpense = {
   cadence: "monthly" | "annual";
   dueDay?: number;
   dueMonth?: number;
+  paidPeriods?: string[];
 };
 
 export type Income = {
@@ -31,9 +32,11 @@ export type Income = {
 export type BudgetCategory = {
   id: string;
   name: string;
-  percent: number;
+  mode: "percent" | "fixed";
+  value: number;
 };
 
+// Kept for backward compat migration only
 export type OnboardingExpense = {
   id: string;
   name: string;
@@ -53,8 +56,6 @@ export type BudgetState = {
     payCycleType: PayCycle;
     paycheckAmount: number;
   };
-  expenses: OnboardingExpense[];
-  allocations: Allocation[];
   meta: {
     onboardingComplete: boolean;
     version: 1;
@@ -79,8 +80,6 @@ export function defaultBudget(overrides?: Partial<BudgetState>): BudgetState {
       payCycleType: "biweekly",
       paycheckAmount: 0,
     },
-    expenses: [],
-    allocations: [],
     meta: {
       onboardingComplete: false,
       version: 1,
@@ -106,12 +105,61 @@ export function defaultBudget(overrides?: Partial<BudgetState>): BudgetState {
       ...base.meta,
       ...(overrides?.meta || {}),
     },
-    expenses: Array.isArray(overrides?.expenses) ? overrides.expenses : base.expenses,
-    allocations: Array.isArray(overrides?.allocations) ? overrides.allocations : base.allocations,
     recurringExpenses: Array.isArray(overrides?.recurringExpenses) ? overrides.recurringExpenses : base.recurringExpenses,
     incomes: Array.isArray(overrides?.incomes) ? overrides.incomes : base.incomes,
     budgetCategories: Array.isArray(overrides?.budgetCategories) ? overrides.budgetCategories : base.budgetCategories,
   };
+}
+
+function normalizeRecurringExpenses(raw: any[]): RecurringExpense[] {
+  return raw.map((e: any) => ({
+    id: typeof e?.id === "string" ? e.id : newId(),
+    name: typeof e?.name === "string" ? e.name : "",
+    amount: Math.max(0, Number(e?.amount ?? 0) || 0),
+    cadence: e?.cadence === "annual" ? "annual" : "monthly",
+    dueDay: typeof e?.dueDay === "number" ? e.dueDay : 1,
+    dueMonth: e?.cadence === "annual" && typeof e?.dueMonth === "number" ? e.dueMonth : undefined,
+    paidPeriods: Array.isArray(e?.paidPeriods) ? e.paidPeriods : [],
+  }));
+}
+
+function normalizeBudgetCategories(parsed: any): BudgetCategory[] {
+  const rawCats = Array.isArray(parsed?.budgetCategories) ? parsed.budgetCategories : [];
+  const rawAllocations = Array.isArray(parsed?.allocations) ? parsed.allocations : [];
+
+  // Detect old format: first category has "percent" field but no "mode" field
+  const isOldCatFormat = rawCats.length > 0 && "percent" in rawCats[0] && !("mode" in rawCats[0]);
+
+  if (isOldCatFormat || (rawCats.length === 0 && rawAllocations.length > 0)) {
+    // Old format: convert percent-based categories + fixed allocations
+    const fromCats: BudgetCategory[] = rawCats.map((c: any) => ({
+      id: typeof c.id === "string" ? c.id : newId(),
+      name: typeof c.name === "string" ? c.name : "",
+      mode: "percent" as const,
+      value: Math.max(0, Number(c.percent ?? 0) || 0),
+    })).filter((c: BudgetCategory) => c.name.trim().length > 0);
+
+    const fromAllocations: BudgetCategory[] = rawAllocations.map((a: any) => ({
+      id: typeof a.id === "string" ? a.id : newId(),
+      name: typeof a.name === "string" ? a.name : "",
+      mode: (a.mode === "fixed" ? "fixed" : "percent") as "percent" | "fixed",
+      value: Math.max(0, Number(a.value ?? 0) || 0),
+    })).filter((a: BudgetCategory) => a.name.trim().length > 0);
+
+    // Merge: categories first, then allocations not already present
+    const catIds = new Set(fromCats.map((c) => c.id));
+    return [...fromCats, ...fromAllocations.filter((a) => !catIds.has(a.id))];
+  }
+
+  // New format or empty
+  return rawCats
+    .map((c: any) => ({
+      id: typeof c.id === "string" ? c.id : newId(),
+      name: typeof c.name === "string" ? c.name : "",
+      mode: (c.mode === "fixed" ? "fixed" : "percent") as "percent" | "fixed",
+      value: Math.max(0, Number(c.value ?? 0) || 0),
+    }))
+    .filter((c: BudgetCategory) => c.name.trim().length > 0);
 }
 
 function normalizeParsed(parsed: any): BudgetState {
@@ -119,52 +167,15 @@ function normalizeParsed(parsed: any): BudgetState {
   const paycheckAmount = Math.max(0, Number(parsed?.paycheckAmount ?? parsed?.settings?.paycheckAmount ?? 0) || 0);
   const payCycleType: PayCycle = parsed?.settings?.payCycleType === "semimonthly" ? "semimonthly" : payCycle;
 
-  const expenses: OnboardingExpense[] = Array.isArray(parsed?.expenses)
-    ? parsed.expenses
-        .map((item: any) => ({
-          id: typeof item?.id === "string" ? item.id : newId(),
-          name: typeof item?.name === "string" ? item.name : "",
-          amount: Math.max(0, Number(item?.amount ?? 0) || 0),
-          frequency: item?.frequency === "per-paycheck" ? "per-paycheck" : "monthly",
-        }))
-        .filter((item: OnboardingExpense) => item.name.trim().length > 0)
-    : [];
+  const recurringExpenses = normalizeRecurringExpenses(
+    Array.isArray(parsed?.recurringExpenses) ? parsed.recurringExpenses : []
+  );
 
-  const allocations: Allocation[] = Array.isArray(parsed?.allocations)
-    ? parsed.allocations
-        .map((item: any) => ({
-          id: typeof item?.id === "string" ? item.id : newId(),
-          name: typeof item?.name === "string" ? item.name : "",
-          mode: item?.mode === "fixed" ? "fixed" : "percent",
-          value: Math.max(0, Number(item?.value ?? 0) || 0),
-        }))
-        .filter((item: Allocation) => item.name.trim().length > 0)
-    : [];
-
-  const recurringExpenses: RecurringExpense[] = Array.isArray(parsed?.recurringExpenses) ? parsed.recurringExpenses : [];
-  const rawBudgetCategories: BudgetCategory[] = Array.isArray(parsed?.budgetCategories) ? parsed.budgetCategories : [];
   const incomes: Income[] = Array.isArray(parsed?.incomes) ? parsed.incomes : [];
-  const fixedAllocationIds = new Set(allocations.filter((item) => item.mode === "fixed").map((item) => item.id));
-  let budgetCategories: BudgetCategory[] = rawBudgetCategories.filter((item) => !fixedAllocationIds.has(item.id));
-
-  // Backward compatibility: if categories are missing, rebuild percentage categories from percent allocations.
-  if (budgetCategories.length === 0 && allocations.length > 0) {
-    budgetCategories = allocations
-      .filter((item) => item.mode === "percent")
-      .map((item) => ({
-        id: item.id,
-        name: item.name,
-        percent: item.value,
-      }));
-  }
+  const budgetCategories = normalizeBudgetCategories(parsed);
 
   return defaultBudget({
-    settings: {
-      payCycleType,
-      paycheckAmount,
-    },
-    expenses,
-    allocations,
+    settings: { payCycleType, paycheckAmount },
     meta: {
       onboardingComplete: !!parsed?.meta?.onboardingComplete,
       version: 1,
@@ -197,34 +208,8 @@ function migrateLegacyState(): BudgetState | null {
 
     try {
       const parsed = JSON.parse(raw) as any;
-      const payCycle: PayCycle = parsed?.payCycle === "semimonthly" ? "semimonthly" : "biweekly";
-      const paycheckAmount = Math.max(0, Number(parsed?.paycheckAmount ?? 0) || 0);
-      const recurringExpenses: RecurringExpense[] = Array.isArray(parsed?.recurringExpenses) ? parsed.recurringExpenses : [];
-      const budgetCategories: BudgetCategory[] = Array.isArray(parsed?.budgetCategories) ? parsed.budgetCategories : [];
-
-      const migrated = defaultBudget({
-        settings: { payCycleType: payCycle, paycheckAmount },
-        expenses: [],
-        allocations: budgetCategories.map((c) => ({
-          id: typeof c.id === "string" ? c.id : newId(),
-          name: typeof c.name === "string" ? c.name : "",
-          mode: "percent",
-          value: Math.max(0, Number(c.percent ?? 0) || 0),
-        })),
-        meta: {
-          onboardingComplete: true,
-          version: 1,
-          createdAt: new Date().toISOString(),
-        },
-        incomeMonthly: Math.max(0, Number(parsed?.incomeMonthly ?? 0) || 0),
-        payCycle,
-        lastPaycheckDate: typeof parsed?.lastPaycheckDate === "string" ? parsed.lastPaycheckDate : "",
-        recurringExpenses,
-        incomes: Array.isArray(parsed?.incomes) ? parsed.incomes : [],
-        paycheckAmount,
-        budgetCategories,
-      });
-
+      const migrated = normalizeParsed(parsed);
+      migrated.meta.onboardingComplete = true;
       saveBudget(migrated);
       return migrated;
     } catch {

@@ -3,18 +3,22 @@
 import { useEffect, useState } from "react";
 import { loadState, newId, saveState, type BudgetState, type Income, type PayCycle } from "../lib/storage";
 import { useHydrated } from "../lib/useHydrated";
-import { handleNumberArrowStep } from "../lib/numberInput";
+import { todayISO, incomeDatesForMonth, monthlyIncomeOf } from "../lib/month";
+
+function moneyFmt(value: number) {
+  const v = Number(value) || 0;
+  const abs = Math.abs(v);
+  return `${v < 0 ? "−" : ""}$${abs.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
 export default function IncomePage() {
   const hydrated = useHydrated();
   const [state, setState] = useState<BudgetState | null>(null);
-  const [draft, setDraft] = useState<Income>({
-    id: newId(),
+  const [draft, setDraft] = useState<Omit<Income, "id" | "cadence">>({
     name: "",
     amount: 0,
-    cadence: "monthly",
     payCycle: "biweekly",
-    lastPaycheckDate: "",
+    lastPaycheckDate: todayISO(),
   });
 
   useEffect(() => {
@@ -27,184 +31,222 @@ export default function IncomePage() {
     saveState(state);
   }, [hydrated, state]);
 
-  function addIncome() {
+  function update(id: string, patch: Partial<Income>) {
+    setState((s) => s ? { ...s, incomes: s.incomes.map((i) => (i.id === id ? { ...i, ...patch } : i)) } : s);
+  }
+
+  function remove(id: string) {
+    setState((s) => s ? { ...s, incomes: s.incomes.filter((i) => i.id !== id) } : s);
+  }
+
+  function add() {
     const name = draft.name.trim();
     if (!name) return;
-    const defaultDate = currentIso();
-
-    setState((current) => {
-      if (!current) return current;
+    setState((s) => {
+      if (!s) return s;
       return {
-        ...current,
+        ...s,
         incomes: [
-          ...current.incomes,
+          ...s.incomes,
           {
-            ...draft,
             id: newId(),
             name,
             amount: Math.max(0, Number(draft.amount) || 0),
-            lastPaycheckDate: draft.payCycle === "biweekly" ? defaultDate : "",
+            cadence: "monthly" as const,
+            payCycle: draft.payCycle,
+            lastPaycheckDate: draft.payCycle === "biweekly" ? draft.lastPaycheckDate || todayISO() : "",
           },
         ],
       };
     });
-
-    setDraft({
-      id: newId(),
-      name: "",
-      amount: 0,
-      cadence: "monthly",
-      payCycle: "biweekly",
-      lastPaycheckDate: "",
-    });
-  }
-
-  function currentIso() {
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  }
-
-  function updateIncome(id: string, patch: Partial<Income>) {
-    setState((current) => {
-      if (!current) return current;
-      return {
-        ...current,
-        incomes: current.incomes.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-      };
-    });
+    setDraft({ name: "", amount: 0, payCycle: "biweekly", lastPaycheckDate: todayISO() });
   }
 
   if (!hydrated || !state) {
     return (
-      <section className="ledgerPage">
-        <header className="pageIntro collageRuled">
+      <section className="container">
+        <header className="sheet sheet--ledger page-head">
           <p className="kicker">Income</p>
-          <h1 className="h1">Income ledger</h1>
-          <p className="muted">Loading income entries...</p>
+          <h1 className="page-head__title">Income ledger</h1>
+          <p className="page-head__lead">Loading income entries…</p>
         </header>
       </section>
     );
   }
 
+  const monthly = monthlyIncomeOf(state);
+  const annual = monthly * 12;
+  const biweeklyCount = state.incomes.filter((i) => i.payCycle === "biweekly").length;
+  const semiCount = state.incomes.filter((i) => i.payCycle === "semimonthly").length;
+
   return (
-    <section className="ledgerPage">
-      <header className="pageIntro collageRuled">
+    <section className="container">
+      {/* Page head */}
+      <header className="sheet sheet--ledger page-head">
         <p className="kicker">Income</p>
-        <h1 className="h1">Income ledger</h1>
-        <p className="muted">Maintain the same three-column setup sheet across onboarding and the main income page.</p>
+        <h1 className="page-head__title">Income ledger</h1>
+        <p className="page-head__lead">Maintain the same three-column setup sheet across onboarding and the main income page.</p>
+        <div className="page-head__meta">
+          <div className="page-head__meta-item">
+            <span className="page-head__meta-label">Sources</span>
+            <span className="page-head__meta-value">{state.incomes.length}</span>
+          </div>
+          <div className="page-head__meta-item">
+            <span className="page-head__meta-label">Monthly</span>
+            <span className="page-head__meta-value">{moneyFmt(monthly)}</span>
+          </div>
+          <div className="page-head__meta-item">
+            <span className="page-head__meta-label">Annualized</span>
+            <span className="page-head__meta-value">{moneyFmt(annual)}</span>
+          </div>
+        </div>
       </header>
 
-      <section className="ledgerCard collageRuled">
-        <div className="cardHeader">
-          <h2 className="h2">Sources</h2>
-          <span className="sheetCaption">Bi-weekly entries keep their current last-paycheck anchor automatically.</span>
+      {/* Stats row */}
+      <div className="stat-row">
+        <article className="sheet stat" style={{ padding: "16px 22px 18px" }}>
+          <div className="stat__label">Monthly income</div>
+          <div className="stat__value">{moneyFmt(monthly)}</div>
+        </article>
+        <article className="sheet stat" style={{ padding: "16px 22px 18px" }}>
+          <div className="stat__label">Bi-weekly sources</div>
+          <div className="stat__value">{biweeklyCount}</div>
+        </article>
+        <article className="sheet stat" style={{ padding: "16px 22px 18px" }}>
+          <div className="stat__label">Semi-monthly sources</div>
+          <div className="stat__value">{semiCount}</div>
+        </article>
+      </div>
+
+      {/* Ledger table */}
+      <div className="sheet" style={{ paddingTop: "20px", paddingBottom: 0 }}>
+        <div style={{ padding: "0 28px" }} className="row-between mb-3">
+          <div>
+            <p className="kicker">Sources</p>
+            <h2 className="section-title">All inflow lines</h2>
+          </div>
+          <span className="badge">{state.incomes.length} sources</span>
         </div>
-        <div className="ledgerTableWrap">
-          <table className="ledgerTable">
+
+        <div className="ledger-table-wrap" style={{ borderRadius: "10px 10px 0 0" }}>
+          <table className="ledger-table">
             <thead>
               <tr>
-                <th>Source</th>
-                <th>Amount</th>
-                <th>Cycle</th>
-                <th className="colTight" />
+                <th style={{ width: "30%" }}>Source</th>
+                <th className="text-right" style={{ width: "20%" }}>Amount</th>
+                <th style={{ width: "20%" }}>Cycle</th>
+                <th style={{ width: "25%" }}>Anchor / Days</th>
+                <th className="text-tight" />
               </tr>
             </thead>
             <tbody>
-              {state.incomes.map((income) => (
-                <tr key={income.id}>
-                  <td>
-                    <input className="input" value={income.name} onChange={(e) => updateIncome(income.id, { name: e.target.value })} />
-                  </td>
+              {state.incomes.map((inc) => (
+                <tr key={inc.id}>
                   <td>
                     <input
                       className="input"
-                      type="number"
+                      value={inc.name}
+                      onChange={(e) => update(inc.id, { name: e.target.value })}
+                    />
+                  </td>
+                  <td className="text-right mono">
+                    <input
+                      className="input input--mono"
+                      type="text"
                       inputMode="decimal"
-                      min="0"
-                      step="1"
-                      value={income.amount}
-                      onKeyDown={handleNumberArrowStep}
-                      onChange={(e) => updateIncome(income.id, { amount: Math.max(0, Number(e.target.value || 0)) })}
+                      value={inc.amount}
+                      style={{ textAlign: "right" }}
+                      onChange={(e) =>
+                        update(inc.id, { amount: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) })
+                      }
                     />
                   </td>
                   <td>
                     <select
-                      className="input"
-                      value={income.payCycle}
+                      className="select"
+                      value={inc.payCycle}
                       onChange={(e) =>
-                        updateIncome(income.id, {
+                        update(inc.id, {
                           payCycle: e.target.value as PayCycle,
-                          lastPaycheckDate:
-                            e.target.value === "biweekly" ? income.lastPaycheckDate || currentIso() : "",
+                          lastPaycheckDate: e.target.value === "biweekly" ? inc.lastPaycheckDate || todayISO() : "",
                         })
                       }
                     >
-                      <option value="biweekly">Bi-Weekly</option>
-                      <option value="semimonthly">Semi-Monthly</option>
+                      <option value="biweekly">Bi-weekly</option>
+                      <option value="semimonthly">Semi-monthly</option>
                     </select>
                   </td>
-                  <td className="colTight">
+                  <td>
+                    {inc.payCycle === "biweekly" ? (
+                      <input
+                        className="input"
+                        type="date"
+                        value={inc.lastPaycheckDate || ""}
+                        onChange={(e) => update(inc.id, { lastPaycheckDate: e.target.value })}
+                      />
+                    ) : (
+                      <span className="muted" style={{ fontStyle: "italic" }}>1st &amp; 15th</span>
+                    )}
+                  </td>
+                  <td className="text-tight">
                     <button
-                      className="button ghost deleteButton"
+                      className="btn btn--icon"
                       type="button"
-                      aria-label={`Delete ${income.name}`}
-                      onClick={() =>
-                        setState((current) =>
-                          current
-                            ? {
-                                ...current,
-                                incomes: current.incomes.filter((item) => item.id !== income.id),
-                              }
-                            : current,
-                        )
-                      }
+                      aria-label={`Delete ${inc.name}`}
+                      onClick={() => remove(inc.id)}
                     >
                       ×
                     </button>
                   </td>
                 </tr>
               ))}
-              <tr>
-                <td>
-                  <input
-                    className="input"
-                    placeholder="+ Add new source..."
-                    value={draft.name}
-                    onChange={(e) => setDraft((current) => ({ ...current, name: e.target.value }))}
-                  />
-                </td>
-                <td>
-                  <input
-                    className="input"
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="1"
-                    value={draft.amount}
-                    onKeyDown={handleNumberArrowStep}
-                    onChange={(e) => setDraft((current) => ({ ...current, amount: Math.max(0, Number(e.target.value || 0)) }))}
-                  />
-                </td>
-                <td>
-                  <select
-                    className="input"
-                    value={draft.payCycle}
-                    onChange={(e) => setDraft((current) => ({ ...current, payCycle: e.target.value as PayCycle }))}
-                  >
-                    <option value="biweekly">Bi-Weekly</option>
-                    <option value="semimonthly">Semi-Monthly</option>
-                  </select>
-                </td>
-                <td className="colTight">
-                  <button className="button" type="button" onClick={addIncome}>
-                    Add
-                  </button>
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
-      </section>
+
+        {/* Inline add form */}
+        <div className="inline-form">
+          <div className="field">
+            <label className="field__label">New source</label>
+            <input
+              className="input"
+              placeholder="e.g. Day job"
+              value={draft.name}
+              onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+            />
+          </div>
+          <div className="field">
+            <label className="field__label">Amount</label>
+            <input
+              className="input input--mono"
+              type="text"
+              inputMode="decimal"
+              placeholder="0"
+              value={draft.amount || ""}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, amount: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) }))
+              }
+            />
+          </div>
+          <div className="field">
+            <label className="field__label">Cycle</label>
+            <select
+              className="select"
+              value={draft.payCycle}
+              onChange={(e) => setDraft((d) => ({ ...d, payCycle: e.target.value as PayCycle }))}
+            >
+              <option value="biweekly">Bi-weekly</option>
+              <option value="semimonthly">Semi-monthly</option>
+            </select>
+          </div>
+          <button className="btn" type="button" onClick={add} disabled={!draft.name.trim()}>
+            Add source
+          </button>
+        </div>
+        <p className="field__hint" style={{ padding: "8px 24px 16px 64px" }}>
+          Used to forecast your bi-weekly paycheck dates.
+        </p>
+      </div>
     </section>
   );
 }
