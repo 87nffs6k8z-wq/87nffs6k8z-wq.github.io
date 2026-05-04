@@ -126,7 +126,7 @@ function PeriodCard({
   const unallocated = period.leftover - allocatedTotal;
 
   return (
-    <div className="sheet sheet--ledger period-card">
+    <div className="sheet period-card">
       <div className="period-card__head">
         <div>
           <p className="kicker">{kicker}</p>
@@ -325,7 +325,7 @@ export default function Home() {
   if (!hydrated || !state) {
     return (
       <section className="container">
-        <header className="sheet sheet--ledger page-head">
+        <header className="sheet page-head">
           <p className="kicker">Overview</p>
           <h1 className="page-head__title">Paycheck periods</h1>
           <p className="page-head__lead">Loading the current ledger…</p>
@@ -337,7 +337,7 @@ export default function Home() {
   return (
     <section className="container">
       {/* Page head */}
-      <header className="sheet sheet--ledger page-head">
+      <header className="sheet page-head">
         <p className="kicker">Overview</p>
         <h1 className="page-head__title">Paycheck periods</h1>
         <p className="page-head__lead">
@@ -360,7 +360,7 @@ export default function Home() {
       </header>
 
       {/* Month picker */}
-      <div className="sheet sheet--ledger" style={{ padding: "14px 22px 14px 64px" }}>
+      <div className="sheet" style={{ padding: "14px 22px 14px 22px" }}>
         <div className="row-between">
           <div>
             <p className="kicker">Ledger month</p>

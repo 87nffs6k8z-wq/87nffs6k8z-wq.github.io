@@ -56,7 +56,7 @@ export default function OnboardingPage() {
   if (!hydrated) {
     return (
       <div className="onboarding-stage">
-        <div className="sheet sheet--ledger onboarding-card">
+        <div className="sheet onboarding-card">
           <p className="kicker">Opening Ledger</p>
           <h1 className="page-head__title">Paper &amp; Ink setup</h1>
           <p className="muted">Loading your first sheet…</p>
@@ -69,7 +69,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="onboarding-stage">
-      <div className="sheet sheet--ledger onboarding-card">
+      <div className="sheet onboarding-card">
         {/* Step dots */}
         <div className="onboarding-step-meta">
           {STEPS.map((s, i) => (

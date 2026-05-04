@@ -64,7 +64,7 @@ export default function SettingsPage() {
   return (
     <section className="container">
       {/* Page head */}
-      <header className="sheet sheet--ledger page-head">
+      <header className="sheet page-head">
         <p className="kicker">Settings</p>
         <h1 className="page-head__title">Archive tools</h1>
         <p className="page-head__lead">Manage exports, imports, and onboarding resets without changing the local storage key.</p>

@@ -148,7 +148,7 @@ export default function ExpensesPage() {
   if (!hydrated || !state) {
     return (
       <section className="container">
-        <header className="sheet sheet--ledger page-head">
+        <header className="sheet page-head">
           <p className="kicker">Expenses</p>
           <h1 className="page-head__title">Bill notations</h1>
           <p className="page-head__lead">Loading the ruled bill register…</p>
@@ -162,7 +162,7 @@ export default function ExpensesPage() {
   return (
     <section className="container">
       {/* Page head */}
-      <header className="sheet sheet--ledger page-head">
+      <header className="sheet page-head">
         <p className="kicker">Expenses</p>
         <h1 className="page-head__title">Bill notations</h1>
         <p className="page-head__lead">Track each recurring notation. Annual costs are spread across the year automatically.</p>
@@ -252,7 +252,7 @@ export default function ExpensesPage() {
           {balanced && <span className="stamp stamp--audited">Balanced</span>}
         </div>
 
-        <div className="ledger-table-wrap" style={{ borderRadius: "10px 10px 0 0" }}>
+        <div className="ledger-table-wrap-no-line" style={{ borderRadius: "10px 10px 0 0" }}>
           <table className="ledger-table">
             <thead>
               <tr>

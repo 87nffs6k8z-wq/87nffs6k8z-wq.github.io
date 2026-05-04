@@ -1321,6 +1321,16 @@ select {
   overflow-x: auto;
 }
 
+.ledger-table-wrap-no-line {
+  background:
+    linear-gradient(to right, transparent 0, transparent 40px, transparent 41px),
+    var(--paper-1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-paper-md), var(--shadow-inset);
+  padding: 0 24px 0 24px;
+  overflow-x: auto;
+}
+
 .ledger-table {
   width: 100%;
   border-collapse: collapse;
@@ -1456,12 +1466,12 @@ select {
 }
 
 .period-card {
-  padding: 20px 28px 24px 64px;
+  padding: 20px 28px 24px 28px;
   position: relative;
 }
 
 @media (max-width: 720px) {
-  .period-card { padding: 18px 20px 20px 52px; }
+  .period-card { padding: 18px 20px 20px 20px; }
 }
 
 .period-card__head {
@@ -1555,11 +1565,11 @@ select {
 
 .page-head {
   position: relative;
-  padding: 20px 28px 22px 88px;
+  padding: 20px 28px 22px 28px;
 }
 
 @media (max-width: 720px) {
-  .page-head { padding: 18px 20px 18px 65px; }
+  .page-head { padding: 18px 20px 18px 20px; }
 }
 
 .page-head__top {
@@ -1945,7 +1955,7 @@ select {
   grid-template-columns: 2fr 1fr 1fr auto;
   gap: 12px;
   align-items: end;
-  padding: 16px 24px 18px 64px;
+  padding: 16px 24px 18px 24px;
   background: var(--surface-sunk);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }

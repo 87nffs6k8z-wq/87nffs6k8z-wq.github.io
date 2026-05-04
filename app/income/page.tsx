@@ -65,7 +65,7 @@ export default function IncomePage() {
   if (!hydrated || !state) {
     return (
       <section className="container">
-        <header className="sheet sheet--ledger page-head">
+        <header className="sheet page-head">
           <p className="kicker">Income</p>
           <h1 className="page-head__title">Income ledger</h1>
           <p className="page-head__lead">Loading income entries…</p>
@@ -82,7 +82,7 @@ export default function IncomePage() {
   return (
     <section className="container">
       {/* Page head */}
-      <header className="sheet sheet--ledger page-head">
+      <header className="sheet page-head">
         <p className="kicker">Income</p>
         <h1 className="page-head__title">Income ledger</h1>
         <p className="page-head__lead">Maintain the same three-column setup sheet across onboarding and the main income page.</p>
@@ -128,7 +128,7 @@ export default function IncomePage() {
           <span className="badge">{state.incomes.length} sources</span>
         </div>
 
-        <div className="ledger-table-wrap" style={{ borderRadius: "10px 10px 0 0" }}>
+        <div className="ledger-table-wrap-no-line" style={{ borderRadius: "10px 10px 0 0" }}>
           <table className="ledger-table">
             <thead>
               <tr>

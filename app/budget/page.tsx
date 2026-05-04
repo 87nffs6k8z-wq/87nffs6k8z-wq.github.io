@@ -134,7 +134,7 @@ export default function BudgetPage() {
   if (!hydrated || !state) {
     return (
       <section className="container">
-        <header className="sheet sheet--ledger page-head">
+        <header className="sheet page-head">
           <p className="kicker">Budget</p>
           <h1 className="page-head__title">Allocation plan</h1>
           <p className="page-head__lead">Loading budget categories…</p>
@@ -149,7 +149,7 @@ export default function BudgetPage() {
   return (
     <section className="container">
       {/* Page head */}
-      <header className="sheet sheet--ledger page-head">
+      <header className="sheet page-head">
         <p className="kicker">Budget</p>
         <h1 className="page-head__title">Allocation plan</h1>
         <p className="page-head__lead">Percentage and fixed plans live in one ruled table. Percentages divide the leftover after fixed dollars.</p>
@@ -232,7 +232,7 @@ export default function BudgetPage() {
           <span className={`badge${overdrawn ? " badge--red" : ""}`}>{percentTotal.toFixed(0)}% of remainder</span>
         </div>
 
-        <div className="ledger-table-wrap" style={{ borderRadius: "10px 10px 0 0" }}>
+        <div className="ledger-table-wrap-no-line" style={{ borderRadius: "10px 10px 0 0" }}>
           <table className="ledger-table">
             <thead>
               <tr>
