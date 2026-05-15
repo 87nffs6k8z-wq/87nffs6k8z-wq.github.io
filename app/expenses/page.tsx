@@ -13,19 +13,9 @@ import {
   annualSetAside,
   shiftMonth,
 } from "../lib/month";
-
-function moneyFmt(value: number) {
-  const v = Number(value) || 0;
-  const abs = Math.abs(v);
-  return `${v < 0 ? "−" : ""}$${abs.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function moneyShort(value: number) {
-  const v = Math.abs(Number(value) || 0);
-  if (v >= 10000) return `$${Math.round(v / 1000)}k`;
-  if (v >= 1000) return `$${(v / 1000).toFixed(1)}k`;
-  return moneyFmt(v);
-}
+import { UndoToast, type UndoEntry } from "../components/UndoToast";
+import { SavedIndicator, useSavedIndicator } from "../components/SavedIndicator";
+import { moneyFmt, moneyShort } from "../lib/currency";
 
 function BillsCalendar({ state, month }: { state: BudgetState; month: string }) {
   const { year, monthIndex, lastDay } = monthBounds(month);
@@ -92,12 +82,84 @@ function BillsCalendar({ state, month }: { state: BudgetState; month: string }) 
   );
 }
 
+function BillsAgenda({ state, month }: { state: BudgetState; month: string }) {
+  const { year, monthIndex, lastDay } = monthBounds(month);
+  const today = new Date();
+  const todayDay = today.getFullYear() === year && today.getMonth() === monthIndex ? today.getDate() : null;
+
+  const byDay: Record<number, { kind: "income" | "bill"; name: string; amount: number; paid?: boolean; overdue?: boolean }[]> = {};
+
+  state.incomes.forEach((inc) => {
+    incomeDatesForMonth(inc, month).forEach((date) => {
+      const d = date.getDate();
+      (byDay[d] ||= []).push({ kind: "income", name: inc.name, amount: inc.amount });
+    });
+  });
+
+  state.recurringExpenses.forEach((exp) => {
+    const due = recurringDueDate(exp, month);
+    if (!due) return;
+    const periodId = `${month}-${due.getDate() <= 15 ? "first" : "second"}`;
+    const paid = (exp.paidPeriods ?? []).includes(periodId);
+    const overdue = !paid && todayDay !== null && due.getDate() < todayDay;
+    const amount = exp.cadence === "annual" ? annualSetAside(exp.amount) : exp.amount;
+    (byDay[due.getDate()] ||= []).push({ kind: "bill", name: exp.name, amount, paid, overdue });
+  });
+
+  const days = Object.keys(byDay)
+    .map((d) => parseInt(d, 10))
+    .filter((d) => d >= 1 && d <= lastDay)
+    .sort((a, b) => a - b);
+
+  if (days.length === 0) {
+    return <p className="agenda-empty">No income or bills scheduled this month.</p>;
+  }
+
+  return (
+    <div className="agenda-list">
+      {days.map((d) => {
+        const date = new Date(year, monthIndex, d);
+        const wk = date.toLocaleDateString("en-US", { weekday: "short" });
+        return (
+          <div key={d} className={`agenda-day${todayDay === d ? " agenda-day--today" : ""}`}>
+            <div className="agenda-day__date">
+              <span className="agenda-day__num">{d}</span>
+              <span>{wk}</span>
+            </div>
+            <div className="agenda-day__entries">
+              {byDay[d].map((e, i) => (
+                <div
+                  key={i}
+                  className={[
+                    "agenda-entry",
+                    e.kind === "income" ? "agenda-entry--income" : "",
+                    e.paid ? "agenda-entry--paid" : "",
+                    e.overdue ? "agenda-entry--overdue" : "",
+                  ].filter(Boolean).join(" ")}
+                >
+                  <span className="agenda-entry__name">{e.name}</span>
+                  <span className="agenda-entry__amount">
+                    {e.kind === "income" ? `+${moneyFmt(e.amount)}` : moneyFmt(e.amount)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ExpensesPage() {
   const hydrated = useHydrated();
   const [state, setState] = useState<BudgetState | null>(null);
   const [month, setMonth] = useState(currentMonthKey());
   const [view, setView] = useState<"calendar" | "list">("calendar");
-  const [draft, setDraft] = useState({ name: "", amount: 0, cadence: "monthly" as "monthly" | "annual", dueDay: 1, dueMonth: 1 });
+  const [draft, setDraft] = useState({ name: "", amount: "", cadence: "monthly" as "monthly" | "annual", dueDay: 1, dueMonth: 1 });
+  const [attempted, setAttempted] = useState(false);
+  const [undo, setUndo] = useState<UndoEntry | null>(null);
+  const saved = useSavedIndicator();
 
   useEffect(() => {
     if (!hydrated) return;
@@ -111,26 +173,59 @@ export default function ExpensesPage() {
 
   function update(id: string, patch: Partial<RecurringExpense>) {
     setState((s) => s ? { ...s, recurringExpenses: s.recurringExpenses.map((e) => (e.id === id ? { ...e, ...patch } : e)) } : s);
+    saved.flash();
   }
 
   function remove(id: string) {
-    setState((s) => s ? { ...s, recurringExpenses: s.recurringExpenses.filter((e) => e.id !== id) } : s);
+    setState((s) => {
+      if (!s) return s;
+      const target = s.recurringExpenses.find((e) => e.id === id);
+      if (!target) return s;
+      const next = { ...s, recurringExpenses: s.recurringExpenses.filter((e) => e.id !== id) };
+      setUndo({
+        id,
+        message: `Deleted ${target.name || "bill"}`,
+        onUndo: () => {
+          setState((cur) => cur ? { ...cur, recurringExpenses: [...cur.recurringExpenses, target] } : cur);
+          saved.flash();
+        },
+      });
+      return next;
+    });
   }
 
+  const parsedAmount = Number(draft.amount.replace(/[^0-9.]/g, ""));
+  const nameError = !draft.name.trim() ? "Required" : null;
+  const amountError = !(parsedAmount > 0) ? "Must be more than 0" : null;
+  const canAdd = !nameError && !amountError;
+
   function add() {
+    if (!canAdd) {
+      setAttempted(true);
+      return;
+    }
     const name = draft.name.trim();
-    if (!name) return;
     setState((s) => {
       if (!s) return s;
       return {
         ...s,
         recurringExpenses: [
           ...s.recurringExpenses,
-          { ...draft, id: newId(), name, amount: Math.max(0, Number(draft.amount) || 0), paidPeriods: [] },
+          {
+            id: newId(),
+            name,
+            amount: Math.max(0, parsedAmount),
+            cadence: draft.cadence,
+            dueDay: draft.dueDay,
+            dueMonth: draft.dueMonth,
+            paidPeriods: [],
+          },
         ],
       };
     });
-    setDraft({ name: "", amount: 0, cadence: "monthly", dueDay: 1, dueMonth: 1 });
+    setDraft({ name: "", amount: "", cadence: "monthly", dueDay: 1, dueMonth: 1 });
+    setAttempted(false);
+    saved.flash();
   }
 
   const totals = useMemo(() => {
@@ -147,12 +242,17 @@ export default function ExpensesPage() {
 
   if (!hydrated || !state) {
     return (
-      <section className="container">
+      <section className="container" aria-busy="true">
         <header className="sheet page-head">
           <p className="kicker">Expenses</p>
           <h1 className="page-head__title">Bill notations</h1>
           <p className="page-head__lead">Loading your bill register…</p>
         </header>
+        <div className="sheet" style={{ padding: "20px 28px" }} aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton skeleton--row" />
+          ))}
+        </div>
       </section>
     );
   }
@@ -166,20 +266,6 @@ export default function ExpensesPage() {
         <p className="kicker">Expenses</p>
         <h1 className="page-head__title">Bill notations</h1>
         <p className="page-head__lead">Log your recurring bills here. Annual expenses are divided across 12 months so every period shares the cost evenly.</p>
-        <div className="page-head__meta">
-          <div className="page-head__meta-item">
-            <span className="page-head__meta-label">Monthly bills</span>
-            <span className="page-head__meta-value">{moneyFmt(totals.monthlyBills)}</span>
-          </div>
-          <div className="page-head__meta-item">
-            <span className="page-head__meta-label">Annual set-aside</span>
-            <span className="page-head__meta-value">{moneyFmt(totals.annualSetAside)}</span>
-          </div>
-          <div className="page-head__meta-item">
-            <span className="page-head__meta-label">Total / mo</span>
-            <span className="page-head__meta-value">{moneyFmt(totals.totalMonthly)}</span>
-          </div>
-        </div>
       </header>
 
       {/* Stats row */}
@@ -238,22 +324,30 @@ export default function ExpensesPage() {
         <div className="sheet" style={{ padding: "20px 24px" }}>
           <p className="kicker">{formatMonthLabel(month)}</p>
           <h2 className="section-title mb-3">Bills due calendar</h2>
-          <BillsCalendar state={state} month={month} />
+          <div className="calendar-desktop">
+            <BillsCalendar state={state} month={month} />
+          </div>
+          <div className="calendar-agenda">
+            <BillsAgenda state={state} month={month} />
+          </div>
         </div>
       )}
 
       {/* Bill register table */}
       <div className="sheet" style={{ paddingTop: "20px", paddingBottom: 0 }}>
         <div style={{ padding: "0 28px" }} className="row-between mb-3">
-          <div>
-            <p className="kicker">Recurring entries</p>
-            <h2 className="section-title">Bill register</h2>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+            <div>
+              <p className="kicker">Recurring entries</p>
+              <h2 className="section-title">Bill register</h2>
+            </div>
+            <SavedIndicator visible={saved.visible} />
           </div>
           {balanced && <span className="stamp stamp--audited">Balanced</span>}
         </div>
 
-        <div className="ledger-table-wrap-no-line" style={{ borderRadius: "10px 10px 0 0" }}>
-          <table className="ledger-table">
+        <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
+          <table className="ledger-table ledger-table--responsive">
             <thead>
               <tr>
                 <th style={{ width: "28%" }}>Notation</th>
@@ -267,46 +361,51 @@ export default function ExpensesPage() {
             <tbody>
               {state.recurringExpenses.map((exp) => (
                 <tr key={exp.id}>
-                  <td>
-                    <input className="input" value={exp.name} onChange={(e) => update(exp.id, { name: e.target.value })} />
+                  <td data-label="Notation">
+                    <input className="input" value={exp.name} onChange={(e) => update(exp.id, { name: e.target.value })} aria-label="Bill name" />
                   </td>
-                  <td className="text-right mono">
+                  <td className="text-right mono" data-label="Amount">
                     <input
                       className="input input--mono"
                       type="text"
                       inputMode="decimal"
+                      pattern="[0-9.]*"
                       value={exp.amount}
                       style={{ textAlign: "right" }}
+                      aria-label="Bill amount"
                       onChange={(e) =>
                         update(exp.id, { amount: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) })
                       }
                     />
                   </td>
-                  <td>
+                  <td data-label="Cadence">
                     <select
                       className="select"
                       value={exp.cadence}
+                      aria-label="Cadence"
                       onChange={(e) => update(exp.id, { cadence: e.target.value as "monthly" | "annual" })}
                     >
                       <option value="monthly">Monthly</option>
                       <option value="annual">Annual</option>
                     </select>
                   </td>
-                  <td>
+                  <td data-label="Due day">
                     <input
                       className="input input--mono"
                       type="number"
                       min={1}
                       max={31}
                       value={exp.dueDay ?? 1}
+                      aria-label="Due day"
                       onChange={(e) => update(exp.id, { dueDay: Math.max(1, Math.min(31, Number(e.target.value))) })}
                     />
                   </td>
-                  <td>
+                  <td data-label="Annual month">
                     {exp.cadence === "annual" ? (
                       <select
                         className="select"
                         value={exp.dueMonth ?? 1}
+                        aria-label="Annual month"
                         onChange={(e) => update(exp.id, { dueMonth: Number(e.target.value) })}
                       >
                         {Array.from({ length: 12 }, (_, i) => (
@@ -320,7 +419,7 @@ export default function ExpensesPage() {
                     )}
                   </td>
                   <td className="text-tight">
-                    <button className="btn btn--icon" type="button" onClick={() => remove(exp.id)} aria-label={`Delete ${exp.name}`}>
+                    <button className="btn btn--icon" type="button" onClick={() => remove(exp.id)} aria-label={`Delete ${exp.name || "bill"}`}>
                       ×
                     </button>
                   </td>
@@ -332,27 +431,40 @@ export default function ExpensesPage() {
 
         {/* Inline add form */}
         <div className={`inline-form${draft.cadence === "annual" ? " inline-form--5col" : " inline-form--4col"}`}>
-          <div className="field">
-            <label className="field__label">New notation</label>
+          <div className={`field${attempted && nameError ? " field--has-error" : ""}`}>
+            <label className="field__label" htmlFor="exp-draft-name">New notation</label>
             <input
+              id="exp-draft-name"
               className="input"
               placeholder="e.g. Internet"
               value={draft.name}
+              aria-invalid={attempted && !!nameError}
+              aria-describedby={attempted && nameError ? "exp-draft-name-err" : undefined}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
             />
+            {attempted && nameError && (
+              <span id="exp-draft-name-err" className="field__error">{nameError}</span>
+            )}
           </div>
-          <div className="field">
-            <label className="field__label">Amount</label>
+          <div className={`field${attempted && amountError ? " field--has-error" : ""}`}>
+            <label className="field__label" htmlFor="exp-draft-amount">Amount</label>
             <input
+              id="exp-draft-amount"
               className="input input--mono"
               type="text"
               inputMode="decimal"
+              pattern="[0-9.]*"
               placeholder="0"
-              value={draft.amount || ""}
+              value={draft.amount}
+              aria-invalid={attempted && !!amountError}
+              aria-describedby={attempted && amountError ? "exp-draft-amount-err" : undefined}
               onChange={(e) =>
-                setDraft((d) => ({ ...d, amount: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) }))
+                setDraft((d) => ({ ...d, amount: e.target.value.replace(/[^0-9.]/g, "") }))
               }
             />
+            {attempted && amountError && (
+              <span id="exp-draft-amount-err" className="field__error">{amountError}</span>
+            )}
           </div>
           <div className="field">
             <label className="field__label">Cadence</label>
@@ -392,11 +504,12 @@ export default function ExpensesPage() {
               </select>
             </div>
           )}
-          <button className="btn" type="button" onClick={add} disabled={!draft.name.trim()}>
+          <button className="btn" type="button" onClick={add}>
             Add
           </button>
         </div>
       </div>
+      <UndoToast entry={undo} onDismiss={() => setUndo(null)} />
     </section>
   );
 }

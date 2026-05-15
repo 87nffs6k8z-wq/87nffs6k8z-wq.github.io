@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { loadState, saveState, type BudgetState } from "./lib/storage";
 import {
   currentMonthKey,
@@ -15,12 +16,8 @@ import {
   annualSetAside,
 } from "./lib/month";
 import { useHydrated } from "./lib/useHydrated";
-
-function moneyFmt(value: number) {
-  const v = Number(value) || 0;
-  const abs = Math.abs(v);
-  return `${v < 0 ? "−" : ""}$${abs.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
+import { moneyFmt } from "./lib/currency";
+import { ConfirmDialog } from "./components/ConfirmDialog";
 
 function Money({ value, struck = false }: { value: number; struck?: boolean }) {
   const v = Number(value) || 0;
@@ -123,6 +120,10 @@ function PeriodCard({
     ? "Only paycheck"
     : `${period.index}${ordinal} paycheck of ${period.total}`;
 
+  const paidCount = period.bills.filter((b) => b.paid).length;
+  const billCount = period.bills.length;
+  const paidPct = billCount > 0 ? (paidCount / billCount) * 100 : 0;
+
   const allocations = useMemo(
     () => computeAllocations(period.leftover, budgetCategories),
     [period.leftover, budgetCategories],
@@ -173,8 +174,25 @@ function PeriodCard({
         </div>
       </div>
 
-      {/* 3-column stat tabs — always 3 cols regardless of goals */}
-      <div className="period-card__inline-stats">
+      {billCount > 0 && (
+        <div
+          className="period-card__paid-strip"
+          aria-label={`${paidCount} of ${billCount} bills paid`}
+          title={`${paidCount} of ${billCount} bills paid`}
+        >
+          <span>Bills paid</span>
+          <div className="period-card__paid-bar">
+            <div
+              className={`period-card__paid-bar__fill${paidCount === billCount ? " period-card__paid-bar__fill--all" : ""}`}
+              style={{ width: `${paidPct}%` }}
+            />
+          </div>
+          <span className="period-card__paid-count">{paidCount}/{billCount}</span>
+        </div>
+      )}
+
+      {/* Tabbed panels: income, bills, leftover, optional goals */}
+      <div className="period-card__inline-stats" role="tablist">
         {(
           [
             { key: "income", label: "Income", value: period.totalIncome, neg: false },
@@ -185,26 +203,28 @@ function PeriodCard({
           <button
             key={key}
             type="button"
+            role="tab"
+            aria-selected={tab === key}
             className={`period-card__tab period-card__inline-stat${tab === key ? " period-card__tab--active" : ""}`}
             onClick={() => setTab(key)}
-            aria-pressed={tab === key}
           >
             <div className="stat__label">{label}</div>
             <div className={`stat__value${neg ? " stat__value--neg" : ""}`}>{moneyFmt(value)}</div>
           </button>
         ))}
+        {goals.length > 0 && (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "goals"}
+            className={`period-card__goals-tab${tab === "goals" ? " period-card__goals-tab--active" : ""}`}
+            onClick={() => setTab("goals")}
+          >
+            <span className="stat__label">Goals</span>
+            <span className="period-card__goals-tab__count">{goals.length} active</span>
+          </button>
+        )}
       </div>
-      {goals.length > 0 && (
-        <button
-          type="button"
-          className={`period-card__goals-tab${tab === "goals" ? " period-card__goals-tab--active" : ""}`}
-          onClick={() => setTab("goals")}
-          aria-pressed={tab === "goals"}
-        >
-          <span className="stat__label">Goals</span>
-          <span className="period-card__goals-tab__count">{goals.length} active</span>
-        </button>
-      )}
 
       {/* List content driven by active tab */}
       <div className="recent-list">
@@ -346,6 +366,7 @@ export default function Home() {
   const [state, setState] = useState<BudgetState | null>(null);
   const [month, setMonth] = useState(currentMonthKey());
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [unlockOpen, setUnlockOpen] = useState(false);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -369,10 +390,10 @@ export default function Home() {
         const snapshot: LockedMonth = {
           monthKey: m,
           lockedAt: new Date().toISOString(),
-          incomes: JSON.parse(JSON.stringify(s.incomes)),
-          recurringExpenses: JSON.parse(JSON.stringify(s.recurringExpenses)),
-          budgetCategories: JSON.parse(JSON.stringify(s.budgetCategories)),
-          goals: JSON.parse(JSON.stringify(s.goals)),
+          incomes: structuredClone(s.incomes),
+          recurringExpenses: structuredClone(s.recurringExpenses),
+          budgetCategories: structuredClone(s.budgetCategories),
+          goals: structuredClone(s.goals),
         };
         s = { ...s, lockedMonths: [...s.lockedMonths, snapshot] };
       }
@@ -504,10 +525,10 @@ export default function Home() {
       const snapshot: LockedMonth = {
         monthKey: month,
         lockedAt: new Date().toISOString(),
-        incomes: JSON.parse(JSON.stringify(s.incomes)),
-        recurringExpenses: JSON.parse(JSON.stringify(s.recurringExpenses)),
-        budgetCategories: JSON.parse(JSON.stringify(s.budgetCategories)),
-        goals: JSON.parse(JSON.stringify(s.goals)),
+        incomes: structuredClone(s.incomes),
+        recurringExpenses: structuredClone(s.recurringExpenses),
+        budgetCategories: structuredClone(s.budgetCategories),
+        goals: structuredClone(s.goals),
       };
       const rest = s.lockedMonths.filter((lm) => lm.monthKey !== month);
       return { ...s, lockedMonths: [...rest, snapshot] };
@@ -520,12 +541,70 @@ export default function Home() {
 
   if (!hydrated || !state || !stateForMonth) {
     return (
-      <section className="container">
+      <section className="container" aria-busy="true">
         <header className="sheet page-head">
           <p className="kicker">Overview</p>
           <h1 className="page-head__title">Paycheck periods</h1>
           <p className="page-head__lead">Loading the current ledger…</p>
         </header>
+        <div className="stat-row" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <article key={i} className="sheet stat" style={{ padding: "16px 22px 18px" }}>
+              <span className="skeleton skeleton--line" style={{ width: 90 }} />
+              <div style={{ marginTop: 8 }}>
+                <span className="skeleton skeleton--line" style={{ height: 26, width: 140 }} />
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  const hasNoData =
+    state.incomes.length === 0 && state.recurringExpenses.length === 0;
+
+  if (hasNoData) {
+    return (
+      <section className="container">
+        <header className="sheet page-head">
+          <p className="kicker">Overview</p>
+          <h1 className="page-head__title">Paycheck periods</h1>
+          <p className="page-head__lead">
+            Your ledger is blank. Add an income source to see paychecks, bills, and what's left over.
+          </p>
+        </header>
+        <div className="sheet empty-state">
+          <p className="kicker">Get started</p>
+          <h2 className="section-title">Three steps to your first ledger</h2>
+          <ol className="empty-state__steps">
+            <li>
+              <span className="empty-state__num">1</span>
+              <div>
+                <strong>Add your paycheck.</strong>
+                <p className="muted">Tell the ledger when and how much you get paid.</p>
+              </div>
+            </li>
+            <li>
+              <span className="empty-state__num">2</span>
+              <div>
+                <strong>Log recurring bills.</strong>
+                <p className="muted">Rent, utilities, subscriptions — anything that returns each month.</p>
+              </div>
+            </li>
+            <li>
+              <span className="empty-state__num">3</span>
+              <div>
+                <strong>Plan the leftover.</strong>
+                <p className="muted">Set budget categories so every spare dollar has a job.</p>
+              </div>
+            </li>
+          </ol>
+          <div className="empty-state__actions">
+            <Link href="/income" className="btn btn--lg">Add your first income</Link>
+            <Link href="/expenses" className="btn btn--ghost">Skip to bills</Link>
+          </div>
+        </div>
       </section>
     );
   }
@@ -539,20 +618,6 @@ export default function Home() {
         <p className="page-head__lead">
           Each card represents a paycheck period — income that lands, bills due, and what's left over.
         </p>
-        <div className="page-head__meta">
-          <div className="page-head__meta-item">
-            <span className="page-head__meta-label">Month</span>
-            <span className="page-head__meta-value">{formatMonthLabel(month)}</span>
-          </div>
-          <div className="page-head__meta-item">
-            <span className="page-head__meta-label">Paychecks</span>
-            <span className="page-head__meta-value">{periods.length}</span>
-          </div>
-          <div className="page-head__meta-item">
-            <span className="page-head__meta-label">Bill entries</span>
-            <span className="page-head__meta-value">{state.recurringExpenses.length}</span>
-          </div>
-        </div>
       </header>
 
       {/* Month picker */}
@@ -571,30 +636,34 @@ export default function Home() {
               )}
             </div>
           </div>
-          <div className="row gap-sm" style={{ flexWrap: "wrap", justifyContent: "flex-end" }}>
-            {!isArchived && (
-              <button
-                className="btn btn--ghost"
-                type="button"
-                onClick={archiveMonth}
-                title={isPastMonth ? "Snapshot this month's data so it won't change with future edits" : "Freeze this month's data so future changes to income or expenses won't affect it"}
-              >
-                {isPastMonth ? "Archive" : "Lock"}
-              </button>
-            )}
-            {isArchived && !isUnlocked && (
-              <button className="btn btn--ghost" type="button" onClick={() => setIsUnlocked(true)} title="Temporarily use live data and allow editing">
-                Unlock
-              </button>
-            )}
-            {isArchived && isUnlocked && (
-              <button className="btn btn--ghost" type="button" onClick={() => setIsUnlocked(false)} title={isPastMonth ? "Return to archived snapshot" : "Return to locked snapshot"}>
-                Re-lock
-              </button>
-            )}
-            <button className="btn btn--ghost" type="button" onClick={() => setMonth(shiftMonth(month, -1))} disabled={month <= firstMonthKey}>‹ Prev</button>
-            <button className="btn btn--ghost" type="button" onClick={() => setMonth(currentMonthKey())}>Today</button>
-            <button className="btn btn--ghost" type="button" onClick={() => setMonth(shiftMonth(month, 1))}>Next ›</button>
+          <div className="month-controls">
+            <div className="month-controls__group">
+              <button className="btn btn--ghost" type="button" onClick={() => setMonth(shiftMonth(month, -1))} disabled={month <= firstMonthKey} aria-label="Previous month">‹ Prev</button>
+              <button className="btn btn--ghost" type="button" onClick={() => setMonth(currentMonthKey())}>Today</button>
+              <button className="btn btn--ghost" type="button" onClick={() => setMonth(shiftMonth(month, 1))} aria-label="Next month">Next ›</button>
+            </div>
+            <div className="month-controls__group">
+              {!isArchived && (
+                <button
+                  className="btn btn--ghost"
+                  type="button"
+                  onClick={archiveMonth}
+                  title={isPastMonth ? "Snapshot this month's data so it won't change with future edits" : "Freeze this month's data so future changes to income or expenses won't affect it"}
+                >
+                  {isPastMonth ? "Archive" : "Lock"}
+                </button>
+              )}
+              {isArchived && !isUnlocked && (
+                <button className="btn btn--ghost" type="button" onClick={() => setUnlockOpen(true)} title="Edit this month's underlying income or bills">
+                  Unlock
+                </button>
+              )}
+              {isArchived && isUnlocked && (
+                <button className="btn btn--ghost" type="button" onClick={() => setIsUnlocked(false)} title={isPastMonth ? "Return to archived snapshot" : "Return to locked snapshot"}>
+                  Re-lock
+                </button>
+              )}
+            </div>
           </div>
         </div>
         {!isPastMonth && !isArchived && (
@@ -604,10 +673,32 @@ export default function Home() {
         )}
         {isArchived && isUnlocked && (
           <p className="muted" style={{ marginTop: 8, fontStyle: "italic", fontSize: 13 }}>
-            Unlocked — showing live data. Re-lock to restore the {isPastMonth ? "archived" : "locked"} snapshot.
+            Unlocked — edits here update your live income, bills, and budget for every unlocked month. Re-lock to restore the {isPastMonth ? "archived" : "locked"} snapshot.
           </p>
         )}
       </div>
+
+      <ConfirmDialog
+        open={unlockOpen}
+        title="Unlock this month?"
+        body={
+          <>
+            <p>
+              You're about to edit a {isPastMonth ? "past, archived" : "locked"} month using live data.
+            </p>
+            <p>
+              Changes to income sources, bills, or budget categories aren't scoped to this month — they apply to your live ledger, which affects every unlocked month, including future ones.
+            </p>
+          </>
+        }
+        confirmLabel="Unlock & edit live"
+        cancelLabel="Keep locked"
+        onConfirm={() => {
+          setIsUnlocked(true);
+          setUnlockOpen(false);
+        }}
+        onCancel={() => setUnlockOpen(false)}
+      />
 
       {/* Month stats row */}
       <div className="stat-row">

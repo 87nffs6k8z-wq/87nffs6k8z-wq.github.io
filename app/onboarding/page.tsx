@@ -197,7 +197,7 @@ export default function OnboardingPage() {
             <p className="page-head__lead" style={{ marginBottom: 24 }}>
               Recurring obligations. Annual ones get spread across the year automatically.
             </p>
-            <div className="ledger-table-wrap-no-line" style={{ borderRadius: "10px 10px 0 0" }}>
+            <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
               <table className="ledger-table onboarding-table">
                 <thead>
                   <tr>
@@ -367,7 +367,7 @@ export default function OnboardingPage() {
             <p className="page-head__lead" style={{ marginBottom: 24 }}>
               How should every paycheck be split after bills?
             </p>
-            <div className="ledger-table-wrap-no-line" style={{ borderRadius: "10px 10px 0 0" }}>
+            <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
               <table className="ledger-table">
                 <thead>
                   <tr>
@@ -486,7 +486,7 @@ export default function OnboardingPage() {
               You can link goals to budget categories and bills from the Goals page after setup.
             </p>
             {goals.length > 0 && (
-              <div className="ledger-table-wrap-no-line" style={{ borderRadius: "10px 10px 0 0" }}>
+              <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
                 <table className="ledger-table onboarding-table">
                   <thead>
                     <tr>

@@ -5,12 +5,9 @@ import { loadState, newId, saveState, type BudgetCategory, type BudgetState } fr
 import { useHydrated } from "../lib/useHydrated";
 import { isBudgetOverdrawn } from "../lib/allocations";
 import { monthlyIncomeOf } from "../lib/month";
-
-function moneyFmt(value: number) {
-  const v = Number(value) || 0;
-  const abs = Math.abs(v);
-  return `${v < 0 ? "−" : ""}$${abs.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
+import { moneyFmt } from "../lib/currency";
+import { SavedIndicator, useSavedIndicator } from "../components/SavedIndicator";
+import { UndoToast } from "../components/UndoToast";
 
 function AllocationRing({
   segments,
@@ -78,6 +75,9 @@ export default function BudgetPage() {
   const hydrated = useHydrated();
   const [state, setState] = useState<BudgetState | null>(null);
   const [draft, setDraft] = useState<Omit<BudgetCategory, "id">>({ name: "", mode: "percent", value: 0 });
+  const [attempted, setAttempted] = useState(false);
+  const savedIndicator = useSavedIndicator();
+  const [undoEntry, setUndoEntry] = useState<{ id: string; category: BudgetCategory; index: number; timeout: NodeJS.Timeout } | null>(null);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -91,23 +91,52 @@ export default function BudgetPage() {
 
   function update(id: string, patch: Partial<BudgetCategory>) {
     setState((s) => s ? { ...s, budgetCategories: s.budgetCategories.map((c) => (c.id === id ? { ...c, ...patch } : c)) } : s);
+    savedIndicator.flash();
   }
 
   function remove(id: string) {
-    setState((s) => s ? { ...s, budgetCategories: s.budgetCategories.filter((c) => c.id !== id) } : s);
+    setState((s) => {
+      if (!s) return s;
+      const index = s.budgetCategories.findIndex((c) => c.id === id);
+      const cat = s.budgetCategories[index];
+      if (cat !== undefined) {
+        const timeout = setTimeout(() => setUndoEntry(null), 5000);
+        setUndoEntry({ id, category: cat, index, timeout });
+      }
+      return { ...s, budgetCategories: s.budgetCategories.filter((c) => c.id !== id) };
+    });
+  }
+
+  function handleUndoDelete() {
+    if (!undoEntry) return;
+    clearTimeout(undoEntry.timeout);
+    setState((s) => {
+      if (!s) return s;
+      const newCats = [...s.budgetCategories];
+      newCats.splice(undoEntry.index, 0, undoEntry.category);
+      return { ...s, budgetCategories: newCats };
+    });
+    setUndoEntry(null);
+    savedIndicator.flash();
   }
 
   function add() {
     const name = draft.name.trim();
-    if (!name) return;
+    const value = Math.max(0, Number(draft.value) || 0);
+    if (!name || value === 0) {
+      setAttempted(true);
+      return;
+    }
     setState((s) => {
       if (!s) return s;
       return {
         ...s,
-        budgetCategories: [...s.budgetCategories, { id: newId(), name, mode: draft.mode, value: Math.max(0, Number(draft.value) || 0) }],
+        budgetCategories: [...s.budgetCategories, { id: newId(), name, mode: draft.mode, value }],
       };
     });
     setDraft({ name: "", mode: "percent", value: 0 });
+    setAttempted(false);
+    savedIndicator.flash();
   }
 
   const derived = useMemo(() => {
@@ -133,12 +162,17 @@ export default function BudgetPage() {
 
   if (!hydrated || !state) {
     return (
-      <section className="container">
+      <section className="container" aria-busy="true">
         <header className="sheet page-head">
           <p className="kicker">Budget</p>
           <h1 className="page-head__title">Allocation plan</h1>
           <p className="page-head__lead">Loading budget categories…</p>
         </header>
+        <div className="sheet" style={{ padding: "20px 28px" }} aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton skeleton--row" />
+          ))}
+        </div>
       </section>
     );
   }
@@ -153,20 +187,6 @@ export default function BudgetPage() {
         <p className="kicker">Budget</p>
         <h1 className="page-head__title">Allocation plan</h1>
         <p className="page-head__lead">Decide how each paycheck's leftover gets divided. Fixed amounts are reserved first; percentages split whatever remains.</p>
-        <div className="page-head__meta">
-          <div className="page-head__meta-item">
-            <span className="page-head__meta-label">Monthly income</span>
-            <span className="page-head__meta-value">{moneyFmt(monthlyIncome)}</span>
-          </div>
-          <div className="page-head__meta-item">
-            <span className="page-head__meta-label">% of remainder</span>
-            <span className="page-head__meta-value">{percentTotal.toFixed(0)}%</span>
-          </div>
-          <div className="page-head__meta-item">
-            <span className="page-head__meta-label">Categories</span>
-            <span className="page-head__meta-value">{cats.length}</span>
-          </div>
-        </div>
       </header>
 
       {/* Stats row */}
@@ -232,8 +252,8 @@ export default function BudgetPage() {
           <span className={`badge${overdrawn ? " badge--red" : ""}`}>{percentTotal.toFixed(0)}% of remainder</span>
         </div>
 
-        <div className="ledger-table-wrap-no-line" style={{ borderRadius: "10px 10px 0 0" }}>
-          <table className="ledger-table">
+        <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
+          <table className="ledger-table ledger-table--responsive">
             <thead>
               <tr>
                 <th style={{ width: "50%" }}>Category</th>
@@ -245,10 +265,10 @@ export default function BudgetPage() {
             <tbody>
               {cats.map((c) => (
                   <tr key={c.id}>
-                    <td>
+                    <td data-label="Category">
                       <input className="input" value={c.name} onChange={(e) => update(c.id, { name: e.target.value })} />
                     </td>
-                    <td>
+                    <td data-label="Type">
                       <select
                         className="select"
                         value={c.mode}
@@ -258,7 +278,7 @@ export default function BudgetPage() {
                         <option value="fixed">Fixed $</option>
                       </select>
                     </td>
-                    <td className="text-right mono">
+                    <td className="text-right mono" data-label="Value">
                       <input
                         className="input input--mono"
                         type="text"
@@ -268,6 +288,7 @@ export default function BudgetPage() {
                         onChange={(e) =>
                           update(c.id, { value: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) })
                         }
+                        pattern="[0-9.]*"
                       />
                     </td>
                     <td className="text-tight">
@@ -291,6 +312,7 @@ export default function BudgetPage() {
               value={draft.name}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
             />
+            {attempted && !draft.name.trim() && <p className="field__error">Required</p>}
           </div>
           <div className="field">
             <label className="field__label">Type</label>
@@ -314,13 +336,25 @@ export default function BudgetPage() {
               onChange={(e) =>
                 setDraft((d) => ({ ...d, value: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) }))
               }
+              pattern="[0-9.]*"
             />
+            {attempted && (Math.max(0, Number(draft.value) || 0) === 0) && <p className="field__error">Must be more than 0</p>}
           </div>
-          <button className="btn" type="button" onClick={add} disabled={!draft.name.trim()}>
+          <button className="btn" type="button" onClick={add}>
             Add
           </button>
         </div>
       </div>
+
+      {/* SavedIndicator and UndoToast */}
+      <SavedIndicator visible={savedIndicator.visible} />
+      {undoEntry && (
+        <UndoToast
+          entry={{ id: undoEntry.id, message: "Category deleted", onUndo: handleUndoDelete, onCommit: () => setUndoEntry(null) }}
+          onDismiss={() => setUndoEntry(null)}
+          durationMs={5000}
+        />
+      )}
     </section>
   );
 }

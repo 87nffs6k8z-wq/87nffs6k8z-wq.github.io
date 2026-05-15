@@ -3,12 +3,9 @@
 import { type Dispatch, type SetStateAction, Fragment, useEffect, useMemo, useState } from "react";
 import { loadState, newId, saveState, type BudgetState, type Goal } from "../lib/storage";
 import { useHydrated } from "../lib/useHydrated";
-
-function moneyFmt(value: number) {
-  const v = Number(value) || 0;
-  const abs = Math.abs(v);
-  return `${v < 0 ? "−" : ""}$${abs.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
+import { moneyFmt } from "../lib/currency";
+import { SavedIndicator, useSavedIndicator } from "../components/SavedIndicator";
+import { UndoToast } from "../components/UndoToast";
 
 function GoalProgressBar({ pct, type }: { pct: number; type: "savings" | "debt" }) {
   const clamped = Math.min(100, Math.max(0, pct));
@@ -45,12 +42,14 @@ function AddGoalForm({
   onAdd,
   budgetCategories,
   recurringExpenses,
+  attempted,
 }: {
   draft: DraftGoal;
   setDraft: Dispatch<SetStateAction<DraftGoal>>;
   onAdd: () => void;
   budgetCategories: { id: string; name: string }[];
   recurringExpenses: { id: string; name: string }[];
+  attempted?: boolean;
 }) {
   const hasLinkable = budgetCategories.length > 0 || recurringExpenses.length > 0;
   const sunkStyle = { background: "var(--surface-sunk)" } as const;
@@ -66,6 +65,7 @@ function AddGoalForm({
             onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
             onKeyDown={(e) => e.key === "Enter" && onAdd()}
           />
+          {attempted && !draft.name.trim() && <p className="field__error">Required</p>}
         </div>
         <div className="field">
           <label className="field__label">Type</label>
@@ -93,7 +93,9 @@ function AddGoalForm({
               }))
             }
             onKeyDown={(e) => e.key === "Enter" && onAdd()}
+            pattern="[0-9.]*"
           />
+          {attempted && draft.targetAmount <= 0 && <p className="field__error">Must be more than 0</p>}
         </div>
       </div>
       {hasLinkable && (
@@ -150,7 +152,6 @@ function AddGoalForm({
           className="btn"
           type="button"
           onClick={onAdd}
-          disabled={!draft.name.trim() || draft.targetAmount <= 0}
         >
           Add goal
         </button>
@@ -166,6 +167,9 @@ export default function GoalsPage() {
   const [expandedGoalId, setExpandedGoalId] = useState<string | null>(null);
   const [adjAmount, setAdjAmount] = useState("");
   const [adjNote, setAdjNote] = useState("");
+  const [attempted, setAttempted] = useState(false);
+  const savedIndicator = useSavedIndicator();
+  const [undoEntry, setUndoEntry] = useState<{ id: string; goal: Goal; index: number; timeout: NodeJS.Timeout } | null>(null);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -179,7 +183,10 @@ export default function GoalsPage() {
 
   function addGoal() {
     const name = draft.name.trim();
-    if (!name || draft.targetAmount <= 0) return;
+    if (!name || draft.targetAmount <= 0) {
+      setAttempted(true);
+      return;
+    }
     setState((s) => {
       if (!s) return s;
       const newGoal: Goal = {
@@ -195,15 +202,40 @@ export default function GoalsPage() {
       return { ...s, goals: [...s.goals, newGoal] };
     });
     setDraft({ name: "", type: "savings", targetAmount: 0, linkedBudgetCategoryIds: [], linkedExpenseIds: [] });
+    setAttempted(false);
+    savedIndicator.flash();
   }
 
   function updateGoal(id: string, patch: Partial<Goal>) {
     setState((s) => s ? { ...s, goals: s.goals.map((g) => g.id === id ? { ...g, ...patch } : g) } : s);
+    savedIndicator.flash();
   }
 
   function removeGoal(id: string) {
-    setState((s) => s ? { ...s, goals: s.goals.filter((g) => g.id !== id) } : s);
+    setState((s) => {
+      if (!s) return s;
+      const index = s.goals.findIndex((g) => g.id === id);
+      const goal = s.goals[index];
+      if (goal !== undefined) {
+        const timeout = setTimeout(() => setUndoEntry(null), 5000);
+        setUndoEntry({ id, goal, index, timeout });
+      }
+      return { ...s, goals: s.goals.filter((g) => g.id !== id) };
+    });
     if (expandedGoalId === id) setExpandedGoalId(null);
+  }
+
+  function handleUndoDelete() {
+    if (!undoEntry) return;
+    clearTimeout(undoEntry.timeout);
+    setState((s) => {
+      if (!s) return s;
+      const newGoals = [...s.goals];
+      newGoals.splice(undoEntry.index, 0, undoEntry.goal);
+      return { ...s, goals: newGoals };
+    });
+    setUndoEntry(null);
+    savedIndicator.flash();
   }
 
   function addManualAdjustment(goalId: string) {
@@ -227,6 +259,7 @@ export default function GoalsPage() {
     });
     setAdjAmount("");
     setAdjNote("");
+    savedIndicator.flash();
   }
 
   function removeManualAdjustment(goalId: string, adjId: string) {
@@ -240,6 +273,7 @@ export default function GoalsPage() {
         }),
       };
     });
+    savedIndicator.flash();
   }
 
   const derived = useMemo(() => {
@@ -256,12 +290,17 @@ export default function GoalsPage() {
 
   if (!hydrated || !state) {
     return (
-      <section className="container">
+      <section className="container" aria-busy="true">
         <header className="sheet page-head">
           <p className="kicker">Goals</p>
           <h1 className="page-head__title">Goals &amp; Targets</h1>
           <p className="page-head__lead">Loading goals…</p>
         </header>
+        <div className="sheet" style={{ padding: "20px 28px" }} aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton skeleton--row" />
+          ))}
+        </div>
       </section>
     );
   }
@@ -278,20 +317,6 @@ export default function GoalsPage() {
         <p className="page-head__lead">
           Track savings targets and debt payoff progress. Link a goal to multiple budget categories or recurring bills so the period widget can apply contributions each paycheck.
         </p>
-        <div className="page-head__meta">
-          <div className="page-head__meta-item">
-            <span className="page-head__meta-label">Active goals</span>
-            <span className="page-head__meta-value">{goals.length}</span>
-          </div>
-          <div className="page-head__meta-item">
-            <span className="page-head__meta-label">Total applied</span>
-            <span className="page-head__meta-value">{moneyFmt(totalApplied)}</span>
-          </div>
-          <div className="page-head__meta-item">
-            <span className="page-head__meta-label">Completed</span>
-            <span className="page-head__meta-value">{completed}</span>
-          </div>
-        </div>
       </header>
 
       {/* Progress cards */}
@@ -382,8 +407,8 @@ export default function GoalsPage() {
               <h2 className="section-title">All goals</h2>
             </div>
           </div>
-          <div className="ledger-table-wrap-no-line" style={{ borderRadius: "10px 10px 0 0" }}>
-            <table className="ledger-table">
+          <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
+            <table className="ledger-table ledger-table--responsive">
               <thead>
                 <tr>
                   <th style={{ width: "24%" }}>Goal</th>
@@ -401,14 +426,14 @@ export default function GoalsPage() {
                   return (
                     <Fragment key={g.id}>
                       <tr>
-                        <td>
+                        <td data-label="Goal">
                           <input
                             className="input"
                             value={g.name}
                             onChange={(e) => updateGoal(g.id, { name: e.target.value })}
                           />
                         </td>
-                        <td>
+                        <td data-label="Type">
                           <select
                             className="select"
                             value={g.type}
@@ -418,11 +443,12 @@ export default function GoalsPage() {
                             <option value="debt">Debt</option>
                           </select>
                         </td>
-                        <td className="mono">
+                        <td className="mono" data-label="Target">
                           <input
                             className="input input--mono"
                             type="text"
                             inputMode="decimal"
+                            pattern="[0-9.]*"
                             value={g.targetAmount || ""}
                             onChange={(e) =>
                               updateGoal(g.id, {
@@ -431,8 +457,8 @@ export default function GoalsPage() {
                             }
                           />
                         </td>
-                        <td className="mono">{moneyFmt(applied)}</td>
-                        <td>
+                        <td className="mono" data-label="Applied">{moneyFmt(applied)}</td>
+                        <td data-label="Linked to">
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                             {g.linkedBudgetCategoryIds.map((id) => {
                               const cat = budgetCategories.find((c) => c.id === id);
@@ -447,7 +473,7 @@ export default function GoalsPage() {
                             )}
                           </div>
                         </td>
-                        <td style={{ verticalAlign: "middle" }}>
+                        <td className="text-tight" style={{ verticalAlign: "middle" }}>
                           <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
                             <button
                               className="btn btn--ghost"
@@ -596,7 +622,7 @@ export default function GoalsPage() {
               </tbody>
             </table>
           </div>
-          <AddGoalForm draft={draft} setDraft={setDraft} onAdd={addGoal} budgetCategories={budgetCategories} recurringExpenses={recurringExpenses} />
+          <AddGoalForm draft={draft} setDraft={setDraft} onAdd={addGoal} budgetCategories={budgetCategories} recurringExpenses={recurringExpenses} attempted={attempted} />
         </div>
       )}
 
@@ -607,8 +633,18 @@ export default function GoalsPage() {
             <p className="kicker">New goal</p>
             <h2 className="section-title">Add your first goal</h2>
           </div>
-          <AddGoalForm draft={draft} setDraft={setDraft} onAdd={addGoal} budgetCategories={budgetCategories} recurringExpenses={recurringExpenses} />
+          <AddGoalForm draft={draft} setDraft={setDraft} onAdd={addGoal} budgetCategories={budgetCategories} recurringExpenses={recurringExpenses} attempted={attempted} />
         </div>
+      )}
+
+      {/* SavedIndicator and UndoToast */}
+      <SavedIndicator visible={savedIndicator.visible} />
+      {undoEntry && (
+        <UndoToast
+          entry={{ id: undoEntry.id, message: "Goal deleted", onUndo: handleUndoDelete, onCommit: () => setUndoEntry(null) }}
+          onDismiss={() => setUndoEntry(null)}
+          durationMs={5000}
+        />
       )}
     </section>
   );

@@ -3,9 +3,11 @@
 import { ChangeEvent, useState } from "react";
 import { clearBudget, loadBudget, saveBudget, type BudgetState } from "../lib/budgetStorage";
 import { todayISO } from "../lib/month";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 export default function SettingsPage() {
   const [status, setStatus] = useState("");
+  const [resetOpen, setResetOpen] = useState(false);
 
   function exportData() {
     const state = loadBudget();
@@ -55,8 +57,6 @@ export default function SettingsPage() {
   }
 
   function resetOnboarding() {
-    const confirmed = window.confirm("Reset all local budget data and reopen onboarding?");
-    if (!confirmed) return;
     clearBudget();
     window.location.href = "/onboarding";
   }
@@ -101,7 +101,7 @@ export default function SettingsPage() {
           </div>
           <p className="muted">Wipes all local data and returns to onboarding. Use this if you want to start fresh on this device.</p>
           <div className="settings-actions">
-            <button className="btn btn--danger" type="button" onClick={resetOnboarding}>
+            <button className="btn btn--danger" type="button" onClick={() => setResetOpen(true)}>
               Reset onboarding
             </button>
           </div>
@@ -115,6 +115,16 @@ export default function SettingsPage() {
         </div>
       )}
 
+      <ConfirmDialog
+        open={resetOpen}
+        title="Reset onboarding?"
+        body="This will erase all your local data and return you to the onboarding flow. This cannot be undone."
+        confirmLabel="Reset"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={resetOnboarding}
+        onCancel={() => setResetOpen(false)}
+      />
     </section>
   );
 }
