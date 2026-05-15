@@ -153,13 +153,71 @@ export function paycheckPeriodsForMonth(state: BudgetState, monthKey: string): P
     });
   }
 
-  const total = paycheckDays.length;
-  return paycheckDays.map((paycheckDay, i) => {
-    // First period always starts at day 1 so we capture any bills before the first paycheck
-    const startDay = i === 0 ? 1 : paycheckDay;
-    const endDay = i < total - 1 ? paycheckDays[i + 1] - 1 : lastDay;
+  // Merge paycheck days that land within 2 days of each other into one period.
+  // e.g. semimonthly day-1 + biweekly day-2 → single period starting day 1.
+  // Income from all merged days is still captured because buildPeriod filters by date range.
+  const mergedPaycheckDays: number[] = [paycheckDays[0]];
+  for (let i = 1; i < paycheckDays.length; i++) {
+    if (paycheckDays[i] - mergedPaycheckDays[mergedPaycheckDays.length - 1] > 2) {
+      mergedPaycheckDays.push(paycheckDays[i]);
+    }
+  }
+
+  const total = mergedPaycheckDays.length;
+
+  // Find the first paycheck of next month so we know how far the last period extends.
+  const nextMonthKey = shiftMonth(monthKey, 1);
+  const nextMonthDaySet = new Set<number>();
+  state.incomes.forEach((inc) => {
+    incomeDatesForMonth(inc, nextMonthKey).forEach((d) => nextMonthDaySet.add(d.getDate()));
+  });
+  // overhangDays: days of next month that fall before the next paycheck (funded by this month's last paycheck)
+  const nextMonthFirstPaycheck = [...nextMonthDaySet].sort((a, b) => a - b)[0] ?? 1;
+  const overhangDays = nextMonthFirstPaycheck - 1;
+
+  return mergedPaycheckDays.map((paycheckDay, i) => {
+    // Each period starts exactly on its paycheck day — bills due before the first paycheck
+    // of this month belong to the previous month's last period instead.
+    const startDay = paycheckDay;
+    const isLast = i === total - 1;
+    const endDay = isLast ? lastDay : mergedPaycheckDays[i + 1] - 1;
     const key = PERIOD_ORDINALS[i] ?? `period${i + 1}`;
-    return buildPeriod(state, monthKey, { year, monthIndex, lastDay }, i, total, key, startDay, endDay, paycheckDay);
+    const period = buildPeriod(state, monthKey, { year, monthIndex, lastDay }, i, total, key, startDay, endDay, paycheckDay);
+
+    // For the last period, append bills from next month that the same paycheck covers.
+    if (!isLast || overhangDays === 0) return period;
+
+    const periodId = `${monthKey}-${key}`;
+    const { year: ny, monthIndex: nmi } = monthBounds(nextMonthKey);
+    const overhangBills: PaycheckPeriod["bills"] = [];
+
+    state.recurringExpenses.forEach((exp) => {
+      const due = recurringDueDate(exp, nextMonthKey);
+      if (!due) return;
+      const day = due.getDate();
+      if (day > overhangDays) return;
+      const amount = exp.cadence === "annual" ? annualSetAside(exp.amount) : exp.amount;
+      const paid = (exp.paidPeriods ?? []).includes(periodId);
+      overhangBills.push({ id: `${exp.id}-overhang`, expenseId: exp.id, name: exp.name, date: due, amount, paid, cadence: exp.cadence, periodId });
+    });
+
+    const startDate = new Date(year, monthIndex, startDay);
+    const overhangEndDate = new Date(ny, nmi, overhangDays);
+    const newLabel = `${formatShortDate(startDate)} – ${formatShortDate(overhangEndDate)}`;
+
+    if (overhangBills.length === 0) return { ...period, label: newLabel };
+
+    const extraBills = overhangBills.reduce((s, b) => s + b.amount, 0);
+    const newTotalBills = period.totalBills + extraBills;
+
+    return {
+      ...period,
+      bills: [...period.bills, ...overhangBills],
+      totalBills: newTotalBills,
+      leftover: period.totalIncome - newTotalBills,
+      label: newLabel,
+      entryCount: period.entryCount + overhangBills.length,
+    };
   });
 }
 

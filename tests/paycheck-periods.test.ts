@@ -131,27 +131,33 @@ describe("Scenario B — semi-monthly + bi-weekly (anchor May 2)", () => {
     semiIncome("semi", "Semi Job", 2000),
     biwIncome("biw", "Biweekly Job", 1400, "2026-05-02"),
   ]);
-  // Paycheck days: semi=[1,15], biweekly=[2,16,30] → sorted unique: [1,2,15,16,30]
+  // Raw paycheck days: semi=[1,15], biweekly=[2,16,30] → sorted unique: [1,2,15,16,30]
+  // After merging days within 2 of each other: [1,15,30] → 3 periods
 
-  it("produces 5 periods", () => {
-    expect(paycheckPeriodsForMonth(state, MAY)).to.have.lengthOf(5);
+  it("produces 3 periods (day-1 and day-2 merged; day-15 and day-16 merged)", () => {
+    expect(paycheckPeriodsForMonth(state, MAY)).to.have.lengthOf(3);
   });
 
-  it("paycheck days are [1, 2, 15, 16, 30]", () => {
+  it("merged period start days are [1, 15, 30]", () => {
     const days = paycheckPeriodsForMonth(state, MAY).map((p) => p.paycheckDay);
-    expect(days).to.deep.equal([1, 2, 15, 16, 30]);
+    expect(days).to.deep.equal([1, 15, 30]);
   });
 
-  it("semi-monthly income lands in exactly 2 periods (days 1 and 15)", () => {
+  it("semi-monthly income lands in the first 2 periods (days 1 and 15 within their ranges)", () => {
     const periods = paycheckPeriodsForMonth(state, MAY);
     const withSemi = periods.filter((p) => p.incomes.some((i) => i.name === "Semi Job"));
-    expect(withSemi.map((p) => p.paycheckDay)).to.deep.equal([1, 15]);
+    expect(withSemi).to.have.lengthOf(2);
   });
 
-  it("bi-weekly income lands in exactly 3 periods (days 2, 16, 30)", () => {
+  it("bi-weekly income lands in all 3 periods (days 2, 16, 30 each within their period range)", () => {
     const periods = paycheckPeriodsForMonth(state, MAY);
     const withBiw = periods.filter((p) => p.incomes.some((i) => i.name === "Biweekly Job"));
-    expect(withBiw.map((p) => p.paycheckDay)).to.deep.equal([2, 16, 30]);
+    expect(withBiw).to.have.lengthOf(3);
+  });
+
+  it("first merged period income = $3,400 (semi $2,000 + biweekly $1,400)", () => {
+    const [p1] = paycheckPeriodsForMonth(state, MAY);
+    expect(p1.totalIncome).to.equal(3400);
   });
 
   it("monthly total income: $4,000 semi + $4,200 biweekly = $8,200", () => {
@@ -168,6 +174,7 @@ describe("Scenario C — two bi-weekly incomes, same anchor (May 2)", () => {
     biwIncome("b", "Job B", 1500, "2026-05-02"),
   ]);
   // Both produce days [2, 16, 30] → union = [2, 16, 30]
+  // 3 paycheck periods; last extends into June (anchor May 2 → next paycheck Jun 13, overhang 12 days)
 
   it("produces exactly 3 periods", () => {
     expect(paycheckPeriodsForMonth(state, MAY)).to.have.lengthOf(3);
@@ -178,9 +185,9 @@ describe("Scenario C — two bi-weekly incomes, same anchor (May 2)", () => {
     expect(days).to.deep.equal([2, 16, 30]);
   });
 
-  it("period 1 starts at day 1 (captures any bills before first paycheck)", () => {
+  it("period 1 starts on the first paycheck day (day 2), not day 1", () => {
     const [p] = paycheckPeriodsForMonth(state, MAY);
-    expect(p.startDay).to.equal(1);
+    expect(p.startDay).to.equal(2);
   });
 
   it("each period receives both paychecks ($3,500 each)", () => {
@@ -194,6 +201,24 @@ describe("Scenario C — two bi-weekly incomes, same anchor (May 2)", () => {
     const total = paycheckPeriodsForMonth(state, MAY).reduce((s, p) => s + p.totalIncome, 0);
     expect(total).to.equal(10500);
   });
+
+  it("last period (3rd paycheck, May 30) extends label into June", () => {
+    const periods = paycheckPeriodsForMonth(state, MAY);
+    const last = periods[periods.length - 1];
+    expect(last.paycheckDay).to.equal(30);
+    expect(last.label).to.include("Jun");
+  });
+
+  it("bills due May 1 go to April's last period, not May's first", () => {
+    const stateWithRent = makeState(
+      [biwIncome("a", "Job", 3500, "2026-05-02")],
+      [monthlyExpense("rent", "Rent", 1200, 1)],
+    );
+    const mayPeriods = paycheckPeriodsForMonth(stateWithRent, MAY);
+    const aprPeriods = paycheckPeriodsForMonth(stateWithRent, "2026-04");
+    expect(mayPeriods[0].bills.some((b) => b.name === "Rent")).to.be.false;
+    expect(aprPeriods[aprPeriods.length - 1].bills.some((b) => b.name === "Rent")).to.be.true;
+  });
 });
 
 // ─── Scenario D: two bi-weekly, offset anchors ──────────────────────────────
@@ -204,6 +229,7 @@ describe("Scenario D — two bi-weekly incomes, offset anchors (May 2 and May 9)
     biwIncome("b", "Job B", 1500, "2026-05-09"), // pays: 9, 23
   ]);
   // Union sorted: [2, 9, 16, 23, 30]
+  // Last period (May 30) extends to Jun 5 — next paychecks Jun 6 (Job B) and Jun 13 (Job A), first = Jun 6
 
   it("produces 5 periods", () => {
     expect(paycheckPeriodsForMonth(state, MAY)).to.have.lengthOf(5);
@@ -235,6 +261,13 @@ describe("Scenario D — two bi-weekly incomes, offset anchors (May 2 and May 9)
   it("monthly total income: $6,000 (Job A) + $3,000 (Job B) = $9,000", () => {
     const total = paycheckPeriodsForMonth(state, MAY).reduce((s, p) => s + p.totalIncome, 0);
     expect(total).to.equal(9000);
+  });
+
+  it("last period (May 30) label extends into June", () => {
+    const periods = paycheckPeriodsForMonth(state, MAY);
+    const last = periods[periods.length - 1];
+    expect(last.paycheckDay).to.equal(30);
+    expect(last.label).to.include("Jun");
   });
 });
 

@@ -236,17 +236,14 @@ export default function BudgetPage() {
           <table className="ledger-table">
             <thead>
               <tr>
-                <th style={{ width: "40%" }}>Category</th>
-                <th style={{ width: "20%" }}>Type</th>
-                <th className="text-right" style={{ width: "20%" }}>Value</th>
-                <th className="text-right" style={{ width: "15%" }}>Monthly $</th>
+                <th style={{ width: "50%" }}>Category</th>
+                <th style={{ width: "22%" }}>Type</th>
+                <th className="text-right" style={{ width: "22%" }}>Value</th>
                 <th className="text-tight" />
               </tr>
             </thead>
             <tbody>
-              {cats.map((c) => {
-                const monthly = c.mode === "percent" ? (monthlyIncome * c.value) / 100 : c.value;
-                return (
+              {cats.map((c) => (
                   <tr key={c.id}>
                     <td>
                       <input className="input" value={c.name} onChange={(e) => update(c.id, { name: e.target.value })} />
@@ -273,15 +270,13 @@ export default function BudgetPage() {
                         }
                       />
                     </td>
-                    <td className="text-right mono">{moneyFmt(monthly)}</td>
                     <td className="text-tight">
                       <button className="btn btn--icon" type="button" onClick={() => remove(c.id)} aria-label={`Delete ${c.name}`}>
                         ×
                       </button>
                     </td>
                   </tr>
-                );
-              })}
+              ))}
             </tbody>
           </table>
         </div>

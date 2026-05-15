@@ -349,7 +349,37 @@ export default function Home() {
 
   useEffect(() => {
     if (!hydrated) return;
-    setState(loadState());
+    const loaded = loadState();
+    if (!loaded) {
+      setState(loaded);
+      return;
+    }
+
+    // Auto-archive every past month that hasn't been snapshotted yet.
+    // Uses current live data as the snapshot (same as the manual Archive button).
+    const cmk = currentMonthKey();
+    const createdMonthKey = loaded.meta.createdAt
+      ? loaded.meta.createdAt.slice(0, 7)
+      : shiftMonth(cmk, -12);
+
+    let s = loaded;
+    let m = shiftMonth(cmk, -1);
+    while (m >= createdMonthKey) {
+      if (!s.lockedMonths.some((lm) => lm.monthKey === m)) {
+        const snapshot: LockedMonth = {
+          monthKey: m,
+          lockedAt: new Date().toISOString(),
+          incomes: JSON.parse(JSON.stringify(s.incomes)),
+          recurringExpenses: JSON.parse(JSON.stringify(s.recurringExpenses)),
+          budgetCategories: JSON.parse(JSON.stringify(s.budgetCategories)),
+          goals: JSON.parse(JSON.stringify(s.goals)),
+        };
+        s = { ...s, lockedMonths: [...s.lockedMonths, snapshot] };
+      }
+      m = shiftMonth(m, -1);
+    }
+
+    setState(s);
   }, [hydrated]);
 
   useEffect(() => {
@@ -364,9 +394,10 @@ export default function Home() {
 
   const cmk = currentMonthKey();
   const isPastMonth = month < cmk;
+  const firstMonthKey = state?.meta.createdAt ? state.meta.createdAt.slice(0, 7) : cmk;
   const lockedMonth: LockedMonth | null = state?.lockedMonths.find((lm) => lm.monthKey === month) ?? null;
   const isArchived = !!lockedMonth;
-  const isReadOnly = isPastMonth && !isUnlocked;
+  const isReadOnly = (isPastMonth || isArchived) && !isUnlocked;
 
   // Use the archived snapshot's data when the month is locked, else live state
   const stateForMonth = useMemo((): BudgetState | null => {
@@ -535,40 +566,45 @@ export default function Home() {
               </div>
               {isReadOnly && (
                 <span className="stamp" style={{ fontSize: 10, padding: "2px 7px", letterSpacing: "0.12em" }}>
-                  {isArchived ? "Archived" : "Past"}
+                  {isArchived ? (isPastMonth ? "Archived" : "Locked") : "Past"}
                 </span>
               )}
             </div>
           </div>
           <div className="row gap-sm" style={{ flexWrap: "wrap", justifyContent: "flex-end" }}>
-            {isPastMonth && !isArchived && (
-              <button className="btn btn--ghost" type="button" onClick={archiveMonth} title="Snapshot this month's data so it won't change with future edits">
-                Archive
+            {!isArchived && (
+              <button
+                className="btn btn--ghost"
+                type="button"
+                onClick={archiveMonth}
+                title={isPastMonth ? "Snapshot this month's data so it won't change with future edits" : "Freeze this month's data so future changes to income or expenses won't affect it"}
+              >
+                {isPastMonth ? "Archive" : "Lock"}
               </button>
             )}
-            {isPastMonth && isArchived && !isUnlocked && (
+            {isArchived && !isUnlocked && (
               <button className="btn btn--ghost" type="button" onClick={() => setIsUnlocked(true)} title="Temporarily use live data and allow editing">
                 Unlock
               </button>
             )}
-            {isPastMonth && isUnlocked && (
-              <button className="btn btn--ghost" type="button" onClick={() => setIsUnlocked(false)} title="Return to archived snapshot">
+            {isArchived && isUnlocked && (
+              <button className="btn btn--ghost" type="button" onClick={() => setIsUnlocked(false)} title={isPastMonth ? "Return to archived snapshot" : "Return to locked snapshot"}>
                 Re-lock
               </button>
             )}
-            <button className="btn btn--ghost" type="button" onClick={() => setMonth(shiftMonth(month, -1))}>‹ Prev</button>
+            <button className="btn btn--ghost" type="button" onClick={() => setMonth(shiftMonth(month, -1))} disabled={month <= firstMonthKey}>‹ Prev</button>
             <button className="btn btn--ghost" type="button" onClick={() => setMonth(currentMonthKey())}>Today</button>
             <button className="btn btn--ghost" type="button" onClick={() => setMonth(shiftMonth(month, 1))}>Next ›</button>
           </div>
         </div>
-        {isPastMonth && !isArchived && (
+        {!isPastMonth && !isArchived && (
           <p className="muted" style={{ marginTop: 8, fontStyle: "italic", fontSize: 13 }}>
-            This month is not archived. Changes to income, expenses, or budget categories will affect its display. Archive to freeze a snapshot.
+            Lock this month to freeze its data — future edits to income, expenses, or budget categories won't affect it.
           </p>
         )}
-        {isPastMonth && isUnlocked && (
+        {isArchived && isUnlocked && (
           <p className="muted" style={{ marginTop: 8, fontStyle: "italic", fontSize: 13 }}>
-            Unlocked — showing live data. Re-lock to restore the archived snapshot.
+            Unlocked — showing live data. Re-lock to restore the {isPastMonth ? "archived" : "locked"} snapshot.
           </p>
         )}
       </div>

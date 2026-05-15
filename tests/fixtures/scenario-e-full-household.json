@@ -1,0 +1,215 @@
+{
+  "app": "Paper & Ink Ledger",
+  "format": "paperInkLedger:v1",
+  "exportedAt": "2026-05-14T12:00:00.000Z",
+  "data": {
+    "meta": {
+      "onboardingComplete": true,
+      "version": 1,
+      "createdAt": "2026-01-10T08:00:00.000Z"
+    },
+    "settings": {
+      "payCycleType": "semimonthly",
+      "paycheckAmount": 3200
+    },
+    "payCycle": "semimonthly",
+    "paycheckAmount": 3200,
+    "lastPaycheckDate": "",
+    "incomeMonthly": 6400,
+    "incomes": [
+      {
+        "id": "income-e1",
+        "name": "Salary",
+        "amount": 3200,
+        "cadence": "monthly",
+        "payCycle": "semimonthly",
+        "lastPaycheckDate": ""
+      }
+    ],
+    "recurringExpenses": [
+      {
+        "id": "exp-e-mortgage",
+        "name": "Mortgage",
+        "amount": 2100,
+        "cadence": "monthly",
+        "dueDay": 1,
+        "paidPeriods": ["2026-04-first"]
+      },
+      {
+        "id": "exp-e-hoa",
+        "name": "HOA",
+        "amount": 280,
+        "cadence": "monthly",
+        "dueDay": 1,
+        "paidPeriods": ["2026-04-first"]
+      },
+      {
+        "id": "exp-e-electric",
+        "name": "Electric",
+        "amount": 145,
+        "cadence": "monthly",
+        "dueDay": 5,
+        "paidPeriods": ["2026-04-first"]
+      },
+      {
+        "id": "exp-e-gas",
+        "name": "Gas",
+        "amount": 80,
+        "cadence": "monthly",
+        "dueDay": 5,
+        "paidPeriods": ["2026-04-first"]
+      },
+      {
+        "id": "exp-e-water",
+        "name": "Water & Sewer",
+        "amount": 62,
+        "cadence": "monthly",
+        "dueDay": 8,
+        "paidPeriods": ["2026-04-first"]
+      },
+      {
+        "id": "exp-e-internet",
+        "name": "Internet",
+        "amount": 90,
+        "cadence": "monthly",
+        "dueDay": 10,
+        "paidPeriods": ["2026-04-first"]
+      },
+      {
+        "id": "exp-e-phone",
+        "name": "Phone (family plan)",
+        "amount": 185,
+        "cadence": "monthly",
+        "dueDay": 12,
+        "paidPeriods": ["2026-04-first"]
+      },
+      {
+        "id": "exp-e-netflix",
+        "name": "Netflix",
+        "amount": 22,
+        "cadence": "monthly",
+        "dueDay": 14,
+        "paidPeriods": ["2026-04-first"]
+      },
+      {
+        "id": "exp-e-spotify",
+        "name": "Spotify",
+        "amount": 11,
+        "cadence": "monthly",
+        "dueDay": 15,
+        "paidPeriods": ["2026-04-second"]
+      },
+      {
+        "id": "exp-e-car",
+        "name": "Car Payment",
+        "amount": 480,
+        "cadence": "monthly",
+        "dueDay": 15,
+        "paidPeriods": ["2026-04-second"]
+      },
+      {
+        "id": "exp-e-gym",
+        "name": "Gym",
+        "amount": 55,
+        "cadence": "monthly",
+        "dueDay": 22,
+        "paidPeriods": ["2026-04-second"]
+      },
+      {
+        "id": "exp-e-streaming",
+        "name": "Streaming Bundle",
+        "amount": 35,
+        "cadence": "monthly",
+        "dueDay": 25,
+        "paidPeriods": ["2026-04-second"]
+      },
+      {
+        "id": "exp-e-car-ins",
+        "name": "Car Insurance",
+        "amount": 2100,
+        "cadence": "annual",
+        "dueDay": 10,
+        "dueMonth": 5,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-e-home-ins",
+        "name": "Home Insurance",
+        "amount": 1800,
+        "cadence": "annual",
+        "dueDay": 20,
+        "dueMonth": 11,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-e-life-ins",
+        "name": "Life Insurance",
+        "amount": 420,
+        "cadence": "annual",
+        "dueDay": 1,
+        "dueMonth": 3,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-e-pest",
+        "name": "Pest Control",
+        "amount": 540,
+        "cadence": "annual",
+        "dueDay": 15,
+        "dueMonth": 6,
+        "paidPeriods": []
+      }
+    ],
+    "budgetCategories": [
+      {
+        "id": "cat-e-ef",
+        "name": "Emergency Fund",
+        "mode": "fixed",
+        "value": 500
+      },
+      {
+        "id": "cat-e-retirement",
+        "name": "Retirement",
+        "mode": "percent",
+        "value": 15
+      },
+      {
+        "id": "cat-e-groceries",
+        "name": "Groceries & Food",
+        "mode": "percent",
+        "value": 20
+      },
+      {
+        "id": "cat-e-personal",
+        "name": "Personal",
+        "mode": "percent",
+        "value": 10
+      }
+    ],
+    "goals": [
+      {
+        "id": "goal-e-ef",
+        "name": "Emergency Fund",
+        "type": "savings",
+        "targetAmount": 10000,
+        "linkedBudgetCategoryIds": ["cat-e-ef"],
+        "linkedExpenseIds": [],
+        "manualAdjustments": [
+          { "id": "adj-e-1", "amount": 1200, "note": "Starting balance" }
+        ],
+        "appliedPeriods": []
+      },
+      {
+        "id": "goal-e-vacation",
+        "name": "Vacation 2026",
+        "type": "savings",
+        "targetAmount": 3000,
+        "linkedBudgetCategoryIds": ["cat-e-personal"],
+        "linkedExpenseIds": [],
+        "manualAdjustments": [],
+        "appliedPeriods": []
+      }
+    ],
+    "lockedMonths": []
+  }
+}

@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { defaultBudget, loadBudget, newId, saveBudget, type BudgetCategory, type BudgetState, type PayCycle, type RecurringExpense } from "../lib/budgetStorage";
+import { defaultBudget, loadBudget, newId, saveBudget, type BudgetCategory, type BudgetState, type Goal, type PayCycle, type RecurringExpense } from "../lib/budgetStorage";
 import { useHydrated } from "../lib/useHydrated";
 import { todayISO } from "../lib/month";
 
 type IncomeDraft = { name: string; amount: number; payCycle: PayCycle; lastPaycheckDate: string };
 type BillDraft = { id: string; name: string; amount: number; cadence: "monthly" | "annual"; dueDay: number; dueMonth: number };
+type GoalDraft = { name: string; type: "savings" | "debt"; targetAmount: number };
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -30,6 +31,8 @@ export default function OnboardingPage() {
     { id: newId(), name: "Spending", mode: "percent", value: 50 },
     { id: newId(), name: "Buffer", mode: "percent", value: 25 },
   ]);
+  const [goals, setGoals] = useState<(GoalDraft & { id: string })[]>([]);
+  const [goalDraft, setGoalDraft] = useState<GoalDraft>({ name: "", type: "savings", targetAmount: 0 });
 
   useEffect(() => {
     if (!hydrated) return;
@@ -67,6 +70,7 @@ export default function OnboardingPage() {
         incomes: [{ id: newId(), name: income.name.trim() || "Primary income", amount: Math.max(0, income.amount), cadence: "monthly", payCycle: income.payCycle, lastPaycheckDate: income.payCycle === "biweekly" ? income.lastPaycheckDate : "" }],
         recurringExpenses: bills.filter((b) => b.name.trim()).map((b) => ({ ...b, paidPeriods: [] }) as RecurringExpense),
         budgetCategories: allocations.filter((a) => a.name.trim()),
+        goals: goals.filter((g) => g.name.trim()).map((g) => ({ id: g.id, name: g.name.trim(), type: g.type, targetAmount: g.targetAmount, linkedBudgetCategoryIds: [], linkedExpenseIds: [], manualAdjustments: [], appliedPeriods: [] }) as Goal),
         payCycle: income.payCycle,
         paycheckAmount: income.amount,
         incomeMonthly: income.payCycle === "biweekly" ? (income.amount * 26) / 12 : (income.amount * 24) / 12,
@@ -88,7 +92,7 @@ export default function OnboardingPage() {
     );
   }
 
-  const STEPS = ["Income", "Bills", "Plan"];
+  const STEPS = ["Income", "Bills", "Plan", "Goals"];
 
   return (
     <div className="onboarding-stage">
@@ -470,6 +474,126 @@ export default function OnboardingPage() {
           </div>
         )}
 
+        {/* Step 4: Goals */}
+        {step === 3 && (
+          <div>
+            <p className="kicker">Goals</p>
+            <h1 className="page-head__title" style={{ marginBottom: 10 }}>Set your targets</h1>
+            <p className="page-head__lead" style={{ marginBottom: 8 }}>
+              Optional — add savings targets or debt payoff goals to track alongside your budget.
+            </p>
+            <p className="field__hint" style={{ marginBottom: 24 }}>
+              You can link goals to budget categories and bills from the Goals page after setup.
+            </p>
+            {goals.length > 0 && (
+              <div className="ledger-table-wrap-no-line" style={{ borderRadius: "10px 10px 0 0" }}>
+                <table className="ledger-table onboarding-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: "45%" }}>Goal</th>
+                      <th style={{ width: "25%" }}>Type</th>
+                      <th className="text-right" style={{ width: "25%" }}>Target</th>
+                      <th className="text-tight" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {goals.map((g) => (
+                      <tr key={g.id}>
+                        <td>
+                          <input
+                            className="input"
+                            placeholder="Goal name"
+                            value={g.name}
+                            onChange={(e) => setGoals((xs) => xs.map((x) => x.id === g.id ? { ...x, name: e.target.value } : x))}
+                          />
+                        </td>
+                        <td>
+                          <select
+                            className="select"
+                            value={g.type}
+                            onChange={(e) => setGoals((xs) => xs.map((x) => x.id === g.id ? { ...x, type: e.target.value as "savings" | "debt" } : x))}
+                          >
+                            <option value="savings">Savings</option>
+                            <option value="debt">Debt payoff</option>
+                          </select>
+                        </td>
+                        <td className="text-right mono">
+                          <input
+                            className="input input--mono"
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0"
+                            value={g.targetAmount || ""}
+                            style={{ textAlign: "right" }}
+                            onChange={(e) =>
+                              setGoals((xs) => xs.map((x) => x.id === g.id ? { ...x, targetAmount: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) } : x))
+                            }
+                          />
+                        </td>
+                        <td className="text-tight">
+                          <button
+                            className="btn btn--icon"
+                            type="button"
+                            aria-label={`Delete ${g.name}`}
+                            onClick={() => setGoals((xs) => xs.filter((x) => x.id !== g.id))}
+                          >
+                            ×
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className={`inline-form${goals.length > 0 ? "" : " inline-form--no-top-border"}`} style={goals.length === 0 ? { borderRadius: 10 } : {}}>
+              <div className="field">
+                <label className="field__label">Goal name</label>
+                <input
+                  className="input"
+                  placeholder="e.g. Emergency fund"
+                  value={goalDraft.name}
+                  onChange={(e) => setGoalDraft((d) => ({ ...d, name: e.target.value }))}
+                />
+              </div>
+              <div className="field">
+                <label className="field__label">Type</label>
+                <select
+                  className="select"
+                  value={goalDraft.type}
+                  onChange={(e) => setGoalDraft((d) => ({ ...d, type: e.target.value as "savings" | "debt" }))}
+                >
+                  <option value="savings">Savings</option>
+                  <option value="debt">Debt payoff</option>
+                </select>
+              </div>
+              <div className="field">
+                <label className="field__label">Target ($)</label>
+                <input
+                  className="input input--mono"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={goalDraft.targetAmount || ""}
+                  onChange={(e) => setGoalDraft((d) => ({ ...d, targetAmount: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) }))}
+                />
+              </div>
+              <button
+                className="btn"
+                type="button"
+                disabled={!goalDraft.name.trim()}
+                onClick={() => {
+                  if (!goalDraft.name.trim()) return;
+                  setGoals((xs) => [...xs, { id: newId(), ...goalDraft, name: goalDraft.name.trim() }]);
+                  setGoalDraft({ name: "", type: "savings", targetAmount: 0 });
+                }}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Navigation */}
         <div className="row-between" style={{ marginTop: 32 }}>
           <button
@@ -480,7 +604,7 @@ export default function OnboardingPage() {
           >
             ‹ Back
           </button>
-          {step < 2 ? (
+          {step < 3 ? (
             <button className="btn" type="button" onClick={() => setStep((s) => s + 1)}>
               Continue ›
             </button>

@@ -1,0 +1,219 @@
+{
+  "app": "Paper & Ink Ledger",
+  "format": "paperInkLedger:v1",
+  "exportedAt": "2026-05-14T12:00:00.000Z",
+  "data": {
+    "meta": {
+      "onboardingComplete": true,
+      "version": 1,
+      "createdAt": "2026-03-15T08:00:00.000Z"
+    },
+    "settings": {
+      "payCycleType": "biweekly",
+      "paycheckAmount": 1800
+    },
+    "payCycle": "biweekly",
+    "paycheckAmount": 1800,
+    "lastPaycheckDate": "2026-04-25",
+    "incomeMonthly": 6033,
+    "incomes": [
+      {
+        "id": "income-g1",
+        "name": "Job 1",
+        "amount": 1800,
+        "cadence": "monthly",
+        "payCycle": "biweekly",
+        "lastPaycheckDate": "2026-04-25"
+      },
+      {
+        "id": "income-g2",
+        "name": "Job 2",
+        "amount": 1100,
+        "cadence": "monthly",
+        "payCycle": "biweekly",
+        "lastPaycheckDate": "2026-04-25"
+      }
+    ],
+    "recurringExpenses": [
+      {
+        "id": "exp-g-rent",
+        "name": "Rent",
+        "amount": 1200,
+        "cadence": "monthly",
+        "dueDay": 1,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-g-car",
+        "name": "Car Payment",
+        "amount": 350,
+        "cadence": "monthly",
+        "dueDay": 3,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-g-car-ins",
+        "name": "Car Insurance",
+        "amount": 1440,
+        "cadence": "annual",
+        "dueDay": 5,
+        "dueMonth": 5,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-g-electric",
+        "name": "Electric",
+        "amount": 95,
+        "cadence": "monthly",
+        "dueDay": 7,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-g-gas",
+        "name": "Gas",
+        "amount": 55,
+        "cadence": "monthly",
+        "dueDay": 9,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-g-internet",
+        "name": "Internet",
+        "amount": 70,
+        "cadence": "monthly",
+        "dueDay": 12,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-g-phone",
+        "name": "Phone",
+        "amount": 60,
+        "cadence": "monthly",
+        "dueDay": 15,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-g-renters",
+        "name": "Renter's Insurance",
+        "amount": 216,
+        "cadence": "annual",
+        "dueDay": 16,
+        "dueMonth": 5,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-g-netflix",
+        "name": "Netflix",
+        "amount": 18,
+        "cadence": "monthly",
+        "dueDay": 18,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-g-hulu",
+        "name": "Hulu",
+        "amount": 18,
+        "cadence": "monthly",
+        "dueDay": 20,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-g-disney",
+        "name": "Disney+",
+        "amount": 14,
+        "cadence": "monthly",
+        "dueDay": 20,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-g-gym",
+        "name": "Gym",
+        "amount": 40,
+        "cadence": "monthly",
+        "dueDay": 22,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-g-cc",
+        "name": "Credit Card (min)",
+        "amount": 200,
+        "cadence": "monthly",
+        "dueDay": 24,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-g-amazon",
+        "name": "Amazon",
+        "amount": 17,
+        "cadence": "monthly",
+        "dueDay": 27,
+        "paidPeriods": []
+      }
+    ],
+    "budgetCategories": [
+      {
+        "id": "cat-g-savings",
+        "name": "Savings",
+        "mode": "percent",
+        "value": 10
+      },
+      {
+        "id": "cat-g-groceries",
+        "name": "Groceries",
+        "mode": "fixed",
+        "value": 350
+      },
+      {
+        "id": "cat-g-buffer",
+        "name": "Buffer",
+        "mode": "percent",
+        "value": 5
+      }
+    ],
+    "goals": [
+      {
+        "id": "goal-g-car",
+        "name": "Car Payoff",
+        "type": "debt",
+        "targetAmount": 12400,
+        "linkedBudgetCategoryIds": [],
+        "linkedExpenseIds": ["exp-g-car"],
+        "manualAdjustments": [],
+        "appliedPeriods": [
+          { "periodId": "2026-03-first", "amount": 350 },
+          { "periodId": "2026-04-first", "amount": 350 }
+        ]
+      },
+      {
+        "id": "goal-g-ef",
+        "name": "Emergency Fund",
+        "type": "savings",
+        "targetAmount": 5000,
+        "linkedBudgetCategoryIds": ["cat-g-savings"],
+        "linkedExpenseIds": [],
+        "manualAdjustments": [],
+        "appliedPeriods": [
+          { "periodId": "2026-03-first", "amount": 50 },
+          { "periodId": "2026-03-second", "amount": 200 },
+          { "periodId": "2026-04-first", "amount": 50 },
+          { "periodId": "2026-04-second", "amount": 250 }
+        ]
+      },
+      {
+        "id": "goal-g-vacation",
+        "name": "Vacation 2026",
+        "type": "savings",
+        "targetAmount": 2000,
+        "linkedBudgetCategoryIds": [],
+        "linkedExpenseIds": [],
+        "manualAdjustments": [
+          { "id": "adj-g-1", "amount": 250, "note": "Birthday money" }
+        ],
+        "appliedPeriods": [
+          { "periodId": "2026-04-second", "amount": 100 }
+        ]
+      }
+    ],
+    "lockedMonths": []
+  }
+}

@@ -2,7 +2,7 @@
 
 Paper & Ink Ledger is a local-first paycheck budgeting app. It focuses on the practical question many monthly budget tools blur: **what does this paycheck need to cover before the next one arrives?**
 
-The app stores data in browser `localStorage` under `budgetApp:v1`. It does not require an account, a bank login, or a server-side database.
+The app stores data in browser. It does not require an account, a bank login, or a server-side database.
 
 ## What It Does
 

@@ -1,0 +1,207 @@
+{
+  "app": "Paper & Ink Ledger",
+  "format": "paperInkLedger:v1",
+  "exportedAt": "2026-05-14T12:00:00.000Z",
+  "data": {
+    "meta": {
+      "onboardingComplete": true,
+      "version": 1,
+      "createdAt": "2026-02-15T08:00:00.000Z"
+    },
+    "settings": {
+      "payCycleType": "semimonthly",
+      "paycheckAmount": 2200
+    },
+    "payCycle": "semimonthly",
+    "paycheckAmount": 2200,
+    "lastPaycheckDate": "",
+    "incomeMonthly": 8533,
+    "incomes": [
+      {
+        "id": "income-f1",
+        "name": "W2 Job",
+        "amount": 2200,
+        "cadence": "monthly",
+        "payCycle": "semimonthly",
+        "lastPaycheckDate": ""
+      },
+      {
+        "id": "income-f2",
+        "name": "Freelance A",
+        "amount": 900,
+        "cadence": "monthly",
+        "payCycle": "biweekly",
+        "lastPaycheckDate": "2026-05-02"
+      },
+      {
+        "id": "income-f3",
+        "name": "Freelance B",
+        "amount": 600,
+        "cadence": "monthly",
+        "payCycle": "biweekly",
+        "lastPaycheckDate": "2026-05-09"
+      }
+    ],
+    "recurringExpenses": [
+      {
+        "id": "exp-f-rent",
+        "name": "Rent",
+        "amount": 1650,
+        "cadence": "monthly",
+        "dueDay": 1,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-f-youtube",
+        "name": "YouTube Premium",
+        "amount": 14,
+        "cadence": "monthly",
+        "dueDay": 3,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-f-electric",
+        "name": "Electric",
+        "amount": 110,
+        "cadence": "monthly",
+        "dueDay": 8,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-f-internet",
+        "name": "Internet",
+        "amount": 75,
+        "cadence": "monthly",
+        "dueDay": 10,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-f-phone",
+        "name": "Phone",
+        "amount": 85,
+        "cadence": "monthly",
+        "dueDay": 12,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-f-student-a",
+        "name": "Student Loan A",
+        "amount": 380,
+        "cadence": "monthly",
+        "dueDay": 15,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-f-instacart",
+        "name": "Instacart+",
+        "amount": 200,
+        "cadence": "monthly",
+        "dueDay": 15,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-f-spotify",
+        "name": "Spotify",
+        "amount": 11,
+        "cadence": "monthly",
+        "dueDay": 18,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-f-cc",
+        "name": "Credit Card (min)",
+        "amount": 150,
+        "cadence": "monthly",
+        "dueDay": 20,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-f-student-b",
+        "name": "Student Loan B",
+        "amount": 220,
+        "cadence": "monthly",
+        "dueDay": 28,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-f-renters",
+        "name": "Renter's Insurance",
+        "amount": 180,
+        "cadence": "annual",
+        "dueDay": 15,
+        "dueMonth": 9,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-f-prime",
+        "name": "Amazon Prime",
+        "amount": 139,
+        "cadence": "annual",
+        "dueDay": 22,
+        "dueMonth": 7,
+        "paidPeriods": []
+      }
+    ],
+    "budgetCategories": [
+      {
+        "id": "cat-f-debt",
+        "name": "Debt Snowball",
+        "mode": "fixed",
+        "value": 400
+      },
+      {
+        "id": "cat-f-groceries",
+        "name": "Groceries",
+        "mode": "percent",
+        "value": 12
+      },
+      {
+        "id": "cat-f-fun",
+        "name": "Fun",
+        "mode": "percent",
+        "value": 8
+      },
+      {
+        "id": "cat-f-buffer",
+        "name": "Buffer",
+        "mode": "percent",
+        "value": 5
+      }
+    ],
+    "goals": [
+      {
+        "id": "goal-f-loan-a",
+        "name": "Student Loan A Payoff",
+        "type": "debt",
+        "targetAmount": 18500,
+        "linkedBudgetCategoryIds": ["cat-f-debt"],
+        "linkedExpenseIds": ["exp-f-student-a"],
+        "manualAdjustments": [],
+        "appliedPeriods": []
+      },
+      {
+        "id": "goal-f-cc",
+        "name": "Credit Card Payoff",
+        "type": "debt",
+        "targetAmount": 4200,
+        "linkedBudgetCategoryIds": [],
+        "linkedExpenseIds": ["exp-f-cc"],
+        "manualAdjustments": [],
+        "appliedPeriods": []
+      },
+      {
+        "id": "goal-f-travel",
+        "name": "Travel Fund",
+        "type": "savings",
+        "targetAmount": 2500,
+        "linkedBudgetCategoryIds": ["cat-f-fun"],
+        "linkedExpenseIds": [],
+        "manualAdjustments": [
+          { "id": "adj-f-1", "amount": 500, "note": "Initial savings transfer" }
+        ],
+        "appliedPeriods": []
+      }
+    ],
+    "lockedMonths": []
+  }
+}
