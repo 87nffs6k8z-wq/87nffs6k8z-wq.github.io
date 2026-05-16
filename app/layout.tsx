@@ -5,8 +5,8 @@ import { BottomNav } from "./components/BottomNav";
 import { OnboardingGate } from "./components/OnboardingGate";
 
 export const metadata: Metadata = {
-  title: "Paper & Ink Ledger",
-  description: "A ledger-style budgeting workspace for income, expenses, and budget planning.",
+  title: "Bursar",
+  description: "A ledger-style paycheck budgeting workspace for income, expenses, and budget planning.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </main>
 
         <footer className="footer" aria-label="Footer">
-          <p>Paper &amp; Ink Ledger. Stored locally.</p>
+          <p>Bursar. Stored locally.</p>
         </footer>
 
         {/* Mobile-only bottom navigation */}

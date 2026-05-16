@@ -1,4 +1,4 @@
-# Paper & Ink Ledger — CLAUDE.md
+# Bursar — CLAUDE.md
 
 A paycheck-period budgeting app built with Next.js 15 (static export). All data lives in `localStorage`; there is no backend.
 
@@ -52,7 +52,7 @@ Weekly + biweekly share the `lastPaycheckDate` field; the income page uses a `ne
 5. Falls back to two fixed halves (1–15, 16–end) if no income is configured
 
 ### Data format (localStorage key: `budgetApp:v1`)
-Export wraps the state in `{ app, format: "paperInkLedger:v1", exportedAt, data: BudgetState }`. Import unwraps `data` (or `budgetAppV1` for legacy) before calling `saveBudget`.
+Export wraps the state in `{ app: "Bursar", format: "bursar:v1", exportedAt, data: BudgetState }`. Import unwraps `data` (or `budgetAppV1` for legacy) before calling `saveBudget`; it does not check the `format` string, so older `paperInkLedger:v1` exports still import.
 
 ## Tests
 

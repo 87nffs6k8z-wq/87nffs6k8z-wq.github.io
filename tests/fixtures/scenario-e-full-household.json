@@ -1,6 +1,6 @@
 {
-  "app": "Paper & Ink Ledger",
-  "format": "paperInkLedger:v1",
+  "app": "Bursar",
+  "format": "bursar:v1",
   "exportedAt": "2026-05-14T12:00:00.000Z",
   "data": {
     "meta": {

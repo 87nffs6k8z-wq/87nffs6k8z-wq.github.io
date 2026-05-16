@@ -1,16 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-  <defs>
-    <style>
-      circle { fill: #b6301f; }
-      path { fill: #2b2a26; stroke: #f6efe1; stroke-width: 0.5; }
-    </style>
-  </defs>
   <!-- Paper background -->
   <rect width="16" height="16" fill="#fbf6e9"/>
-  <!-- Decorative circle (brand mark) -->
-  <circle cx="12" cy="4" r="2.5"/>
-  <!-- Simple lines representing a ledger -->
-  <path d="M 2 3 L 10 3 M 2 6 L 10 6 M 2 9 L 10 9 M 2 12 L 10 12"/>
-  <!-- Left margin rule (red line) -->
-  <line x1="1" y1="1" x2="1" y2="15" stroke="#b6301f" stroke-width="1"/>
+  <!-- Outer seal ring (money green) -->
+  <circle cx="8" cy="8" r="6.6" fill="#1f6b3a"/>
+  <!-- Inner ring highlight -->
+  <circle cx="8" cy="8" r="5.6" fill="none" stroke="#fbf6e9" stroke-width="0.35" opacity="0.7"/>
+  <!-- B monogram in cream, like a stamped seal -->
+  <text x="8" y="11.6" font-family="Georgia, 'Times New Roman', serif" font-size="9" font-weight="700" fill="#fbf6e9" text-anchor="middle">B</text>
 </svg>

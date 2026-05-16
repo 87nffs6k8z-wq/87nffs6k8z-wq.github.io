@@ -17,7 +17,7 @@ export function SiteHeader() {
       <div className="headerInner">
         <Link className="brand" href={isOnboarding ? "/onboarding" : "/"} aria-label="Home">
           <span className="brandMark" aria-hidden="true" />
-          <span className="brandText">Paper &amp; Ink Ledger</span>
+          <span className="brandText">Bursar</span>
         </Link>
 
         {!isOnboarding && (

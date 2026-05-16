@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { defaultBudget, loadBudget, newId, saveBudget, type BudgetCategory, type BudgetState, type Goal, type PayCycle, type RecurringExpense } from "../lib/budgetStorage";
 import { useHydrated } from "../lib/useHydrated";
 import { todayISO } from "../lib/month";
+import { UndoToast, type UndoEntry } from "../components/UndoToast";
+import { jumpToAddForm } from "../lib/jumpToAddForm";
 
 type IncomeDraft = { name: string; amount: number; payCycle: PayCycle; lastPaycheckDate: string };
 type BillDraft = { id: string; name: string; amount: number; cadence: "monthly" | "annual"; dueDay: number; dueMonth: number };
@@ -16,23 +18,120 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [income, setIncome] = useState<IncomeDraft>({
     name: "Day job",
-    amount: 2400,
+    amount: 1800,
     payCycle: "biweekly",
     lastPaycheckDate: todayISO(),
   });
   const [bills, setBills] = useState<BillDraft[]>([
     { id: newId(), name: "Rent", amount: 1200, cadence: "monthly", dueDay: 1, dueMonth: 1 },
     { id: newId(), name: "Utilities", amount: 120, cadence: "monthly", dueDay: 8, dueMonth: 1 },
+    { id: newId(), name: "Internet", amount: 60, cadence: "monthly", dueDay: 15, dueMonth: 1 },
+    { id: newId(), name: "Phone", amount: 45, cadence: "monthly", dueDay: 20, dueMonth: 1 },
+    { id: newId(), name: "Car insurance", amount: 600, cadence: "annual", dueDay: 15, dueMonth: 6 },
   ]);
   const [billDraft, setBillDraft] = useState<Omit<BillDraft, "id">>({ name: "", amount: 0, cadence: "monthly", dueDay: 1, dueMonth: 1 });
   const [allocDraft, setAllocDraft] = useState<Omit<BudgetCategory, "id">>({ name: "", mode: "percent", value: 0 });
   const [allocations, setAllocations] = useState<BudgetCategory[]>([
     { id: newId(), name: "Savings", mode: "percent", value: 25 },
     { id: newId(), name: "Spending", mode: "percent", value: 50 },
+    { id: newId(), name: "Gas", mode: "fixed", value: 60 },
     { id: newId(), name: "Buffer", mode: "percent", value: 25 },
   ]);
-  const [goals, setGoals] = useState<(GoalDraft & { id: string })[]>([]);
+  const [goals, setGoals] = useState<(GoalDraft & { id: string })[]>([
+    { id: newId(), name: "Emergency fund", type: "savings", targetAmount: 9000 },
+  ]);
   const [goalDraft, setGoalDraft] = useState<GoalDraft>({ name: "", type: "savings", targetAmount: 0 });
+  const [attemptedBill, setAttemptedBill] = useState(false);
+  const [attemptedAlloc, setAttemptedAlloc] = useState(false);
+  const [attemptedGoal, setAttemptedGoal] = useState(false);
+  const [undo, setUndo] = useState<UndoEntry | null>(null);
+
+  function addBill() {
+    const name = billDraft.name.trim();
+    if (!name || billDraft.amount <= 0) {
+      setAttemptedBill(true);
+      return;
+    }
+    setBills((xs) => [...xs, { id: newId(), ...billDraft, name }]);
+    setBillDraft({ name: "", amount: 0, cadence: "monthly", dueDay: 1, dueMonth: 1 });
+    setAttemptedBill(false);
+  }
+
+  function removeBill(id: string) {
+    setBills((xs) => {
+      const index = xs.findIndex((x) => x.id === id);
+      const target = xs[index];
+      if (!target) return xs;
+      setUndo({
+        id,
+        message: `Removed ${target.name || "bill"}`,
+        onUndo: () => setBills((cur) => {
+          const restored = [...cur];
+          restored.splice(index, 0, target);
+          return restored;
+        }),
+      });
+      return xs.filter((x) => x.id !== id);
+    });
+  }
+
+  function addAllocation() {
+    const name = allocDraft.name.trim();
+    if (!name || allocDraft.value <= 0) {
+      setAttemptedAlloc(true);
+      return;
+    }
+    setAllocations((xs) => [...xs, { id: newId(), ...allocDraft, name }]);
+    setAllocDraft({ name: "", mode: "percent", value: 0 });
+    setAttemptedAlloc(false);
+  }
+
+  function removeAllocation(id: string) {
+    setAllocations((xs) => {
+      const index = xs.findIndex((x) => x.id === id);
+      const target = xs[index];
+      if (!target) return xs;
+      setUndo({
+        id,
+        message: `Removed ${target.name || "category"}`,
+        onUndo: () => setAllocations((cur) => {
+          const restored = [...cur];
+          restored.splice(index, 0, target);
+          return restored;
+        }),
+      });
+      return xs.filter((x) => x.id !== id);
+    });
+  }
+
+  function addGoal() {
+    const name = goalDraft.name.trim();
+    if (!name || goalDraft.targetAmount <= 0) {
+      setAttemptedGoal(true);
+      return;
+    }
+    setGoals((xs) => [...xs, { id: newId(), ...goalDraft, name }]);
+    setGoalDraft({ name: "", type: "savings", targetAmount: 0 });
+    setAttemptedGoal(false);
+  }
+
+  function removeGoal(id: string) {
+    setGoals((xs) => {
+      const index = xs.findIndex((x) => x.id === id);
+      const target = xs[index];
+      if (!target) return xs;
+      setUndo({
+        id,
+        message: `Removed ${target.name || "goal"}`,
+        onUndo: () => setGoals((cur) => {
+          const restored = [...cur];
+          restored.splice(index, 0, target);
+          return restored;
+        }),
+      });
+      return xs.filter((x) => x.id !== id);
+    });
+  }
 
   useEffect(() => {
     if (!hydrated) return;
@@ -85,7 +184,7 @@ export default function OnboardingPage() {
       <div className="onboarding-stage">
         <div className="sheet onboarding-card">
           <p className="kicker">Opening Ledger</p>
-          <h1 className="page-head__title">Paper &amp; Ink setup</h1>
+          <h1 className="page-head__title">Bursar setup</h1>
           <p className="muted">Loading your first sheet…</p>
         </div>
       </div>
@@ -197,7 +296,7 @@ export default function OnboardingPage() {
 
             <div className="field">
               <label className="field__label">Import a saved ledger file</label>
-              <p className="field__hint">Pick a .json file exported from Paper &amp; Ink to skip setup entirely.</p>
+              <p className="field__hint">Pick a .json file exported from Bursar (or Paper &amp; Ink) to skip setup entirely.</p>
               <label className="btn btn--ghost onboarding-file-btn">
                 Choose file
                 <input type="file" accept=".json,application/json" style={{ display: "none" }} onChange={importFile} />
@@ -214,6 +313,11 @@ export default function OnboardingPage() {
             <p className="page-head__lead" style={{ marginBottom: 24 }}>
               Recurring obligations. Annual ones get spread across the year automatically.
             </p>
+            <div className="mobile-only-inline" style={{ width: "100%", justifyContent: "flex-end", marginBottom: 8 }}>
+              <button type="button" className="btn btn--jump" onClick={() => jumpToAddForm()}>
+                + Add bill
+              </button>
+            </div>
             <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
               <table className="ledger-table ledger-table--responsive onboarding-table">
                 <thead>
@@ -296,7 +400,7 @@ export default function OnboardingPage() {
                           className="btn btn--icon"
                           type="button"
                           aria-label={`Delete ${b.name}`}
-                          onClick={() => setBills((xs) => xs.filter((x) => x.id !== b.id))}
+                          onClick={() => removeBill(b.id)}
                         >
                           ×
                         </button>
@@ -306,26 +410,36 @@ export default function OnboardingPage() {
                 </tbody>
               </table>
             </div>
-            <div className="inline-form inline-form--4col">
-              <div className="field">
-                <label className="field__label">New notation</label>
+            <div id="add-form" className="inline-form inline-form--4col">
+              <div className={`field${attemptedBill && !billDraft.name.trim() ? " field--has-error" : ""}`}>
+                <label className="field__label" htmlFor="onb-bill-name">New notation</label>
                 <input
+                  id="onb-bill-name"
                   className="input"
                   placeholder="e.g. Internet"
                   value={billDraft.name}
+                  aria-invalid={attemptedBill && !billDraft.name.trim()}
                   onChange={(e) => setBillDraft((d) => ({ ...d, name: e.target.value }))}
                 />
+                {attemptedBill && !billDraft.name.trim() && (
+                  <span className="field__error">Required</span>
+                )}
               </div>
-              <div className="field">
-                <label className="field__label">Amount</label>
+              <div className={`field${attemptedBill && billDraft.amount <= 0 ? " field--has-error" : ""}`}>
+                <label className="field__label" htmlFor="onb-bill-amount">Amount</label>
                 <input
+                  id="onb-bill-amount"
                   className="input input--mono"
                   type="text"
                   inputMode="decimal"
                   placeholder="0"
                   value={billDraft.amount || ""}
+                  aria-invalid={attemptedBill && billDraft.amount <= 0}
                   onChange={(e) => setBillDraft((d) => ({ ...d, amount: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) }))}
                 />
+                {attemptedBill && billDraft.amount <= 0 && (
+                  <span className="field__error">Must be more than 0</span>
+                )}
               </div>
               <div className="field">
                 <label className="field__label">Cadence</label>
@@ -374,12 +488,7 @@ export default function OnboardingPage() {
               <button
                 className="btn"
                 type="button"
-                disabled={!billDraft.name.trim()}
-                onClick={() => {
-                  if (!billDraft.name.trim()) return;
-                  setBills((xs) => [...xs, { id: newId(), ...billDraft, name: billDraft.name.trim() }]);
-                  setBillDraft({ name: "", amount: 0, cadence: "monthly", dueDay: 1, dueMonth: 1 });
-                }}
+                onClick={addBill}
               >
                 Add bill
               </button>
@@ -395,6 +504,11 @@ export default function OnboardingPage() {
             <p className="page-head__lead" style={{ marginBottom: 24 }}>
               How should every paycheck be split after bills?
             </p>
+            <div className="mobile-only-inline" style={{ width: "100%", justifyContent: "flex-end", marginBottom: 8 }}>
+              <button type="button" className="btn btn--jump" onClick={() => jumpToAddForm()}>
+                + Add category
+              </button>
+            </div>
             <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
               <table className="ledger-table ledger-table--responsive onboarding-table">
                 <thead>
@@ -444,7 +558,7 @@ export default function OnboardingPage() {
                           className="btn btn--icon"
                           type="button"
                           aria-label={`Delete ${a.name}`}
-                          onClick={() => setAllocations((xs) => xs.filter((x) => x.id !== a.id))}
+                          onClick={() => removeAllocation(a.id)}
                         >
                           ×
                         </button>
@@ -454,15 +568,20 @@ export default function OnboardingPage() {
                 </tbody>
               </table>
             </div>
-            <div className="inline-form">
-              <div className="field">
-                <label className="field__label">New category</label>
+            <div id="add-form" className="inline-form">
+              <div className={`field${attemptedAlloc && !allocDraft.name.trim() ? " field--has-error" : ""}`}>
+                <label className="field__label" htmlFor="onb-alloc-name">New category</label>
                 <input
+                  id="onb-alloc-name"
                   className="input"
                   placeholder="e.g. Travel fund"
                   value={allocDraft.name}
+                  aria-invalid={attemptedAlloc && !allocDraft.name.trim()}
                   onChange={(e) => setAllocDraft((d) => ({ ...d, name: e.target.value }))}
                 />
+                {attemptedAlloc && !allocDraft.name.trim() && (
+                  <span className="field__error">Required</span>
+                )}
               </div>
               <div className="field">
                 <label className="field__label">Type</label>
@@ -475,26 +594,26 @@ export default function OnboardingPage() {
                   <option value="fixed">Fixed $</option>
                 </select>
               </div>
-              <div className="field">
-                <label className="field__label">Value</label>
+              <div className={`field${attemptedAlloc && allocDraft.value <= 0 ? " field--has-error" : ""}`}>
+                <label className="field__label" htmlFor="onb-alloc-value">Value</label>
                 <input
+                  id="onb-alloc-value"
                   className="input input--mono"
                   type="text"
                   inputMode="decimal"
                   placeholder="0"
                   value={allocDraft.value || ""}
+                  aria-invalid={attemptedAlloc && allocDraft.value <= 0}
                   onChange={(e) => setAllocDraft((d) => ({ ...d, value: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) }))}
                 />
+                {attemptedAlloc && allocDraft.value <= 0 && (
+                  <span className="field__error">Must be more than 0</span>
+                )}
               </div>
               <button
                 className="btn"
                 type="button"
-                disabled={!allocDraft.name.trim()}
-                onClick={() => {
-                  if (!allocDraft.name.trim()) return;
-                  setAllocations((xs) => [...xs, { id: newId(), ...allocDraft, name: allocDraft.name.trim() }]);
-                  setAllocDraft({ name: "", mode: "percent", value: 0 });
-                }}
+                onClick={addAllocation}
               >
                 Add category
               </button>
@@ -513,6 +632,13 @@ export default function OnboardingPage() {
             <p className="field__hint" style={{ marginBottom: 24 }}>
               You can link goals to budget categories and bills from the Goals page after setup.
             </p>
+            {goals.length > 0 && (
+              <div className="mobile-only-inline" style={{ width: "100%", justifyContent: "flex-end", marginBottom: 8 }}>
+                <button type="button" className="btn btn--jump" onClick={() => jumpToAddForm()}>
+                  + Add goal
+                </button>
+              </div>
+            )}
             {goals.length > 0 && (
               <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
                 <table className="ledger-table ledger-table--responsive onboarding-table">
@@ -563,7 +689,7 @@ export default function OnboardingPage() {
                             className="btn btn--icon"
                             type="button"
                             aria-label={`Delete ${g.name}`}
-                            onClick={() => setGoals((xs) => xs.filter((x) => x.id !== g.id))}
+                            onClick={() => removeGoal(g.id)}
                           >
                             ×
                           </button>
@@ -574,15 +700,20 @@ export default function OnboardingPage() {
                 </table>
               </div>
             )}
-            <div className={`inline-form${goals.length > 0 ? "" : " inline-form--no-top-border"}`} style={goals.length === 0 ? { borderRadius: 10 } : {}}>
-              <div className="field">
-                <label className="field__label">Goal name</label>
+            <div id="add-form" className={`inline-form${goals.length > 0 ? "" : " inline-form--no-top-border"}`} style={goals.length === 0 ? { borderRadius: 10 } : {}}>
+              <div className={`field${attemptedGoal && !goalDraft.name.trim() ? " field--has-error" : ""}`}>
+                <label className="field__label" htmlFor="onb-goal-name">Goal name</label>
                 <input
+                  id="onb-goal-name"
                   className="input"
                   placeholder="e.g. Emergency fund"
                   value={goalDraft.name}
+                  aria-invalid={attemptedGoal && !goalDraft.name.trim()}
                   onChange={(e) => setGoalDraft((d) => ({ ...d, name: e.target.value }))}
                 />
+                {attemptedGoal && !goalDraft.name.trim() && (
+                  <span className="field__error">Required</span>
+                )}
               </div>
               <div className="field">
                 <label className="field__label">Type</label>
@@ -595,26 +726,26 @@ export default function OnboardingPage() {
                   <option value="debt">Debt payoff</option>
                 </select>
               </div>
-              <div className="field">
-                <label className="field__label">Target ($)</label>
+              <div className={`field${attemptedGoal && goalDraft.targetAmount <= 0 ? " field--has-error" : ""}`}>
+                <label className="field__label" htmlFor="onb-goal-target">Target ($)</label>
                 <input
+                  id="onb-goal-target"
                   className="input input--mono"
                   type="text"
                   inputMode="decimal"
                   placeholder="0"
                   value={goalDraft.targetAmount || ""}
+                  aria-invalid={attemptedGoal && goalDraft.targetAmount <= 0}
                   onChange={(e) => setGoalDraft((d) => ({ ...d, targetAmount: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) }))}
                 />
+                {attemptedGoal && goalDraft.targetAmount <= 0 && (
+                  <span className="field__error">Must be more than 0</span>
+                )}
               </div>
               <button
                 className="btn"
                 type="button"
-                disabled={!goalDraft.name.trim()}
-                onClick={() => {
-                  if (!goalDraft.name.trim()) return;
-                  setGoals((xs) => [...xs, { id: newId(), ...goalDraft, name: goalDraft.name.trim() }]);
-                  setGoalDraft({ name: "", type: "savings", targetAmount: 0 });
-                }}
+                onClick={addGoal}
               >
                 Add goal
               </button>
@@ -638,11 +769,12 @@ export default function OnboardingPage() {
             </button>
           ) : (
             <button className="btn" type="button" onClick={finish}>
-              Open ledger
+              Open Bursar
             </button>
           )}
         </div>
       </div>
+      <UndoToast entry={undo} onDismiss={() => setUndo(null)} />
     </div>
   );
 }

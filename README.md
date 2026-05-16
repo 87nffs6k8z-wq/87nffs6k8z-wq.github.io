@@ -1,6 +1,6 @@
-# Paper & Ink Ledger
+# Bursar
 
-Paper & Ink Ledger is a local-first paycheck budgeting app. It focuses on the practical question many monthly budget tools blur: **what does this paycheck need to cover before the next one arrives?**
+Bursar is a local-first paycheck budgeting app. It focuses on the practical question many monthly budget tools blur: **what does this paycheck need to cover before the next one arrives?**
 
 The app stores data in browser. It does not require an account, a bank login, or a server-side database.
 

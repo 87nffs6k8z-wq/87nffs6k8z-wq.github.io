@@ -13,8 +13,8 @@ export default function SettingsPage() {
     const state = loadBudget();
     const now = new Date();
     const payload = {
-      app: "Paper & Ink Ledger",
-      format: "paperInkLedger:v1",
+      app: "Bursar",
+      format: "bursar:v1",
       exportedAt: now.toISOString(),
       data: state,
     };
@@ -22,7 +22,7 @@ export default function SettingsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `paper-ink-ledger-${todayISO()}.json`;
+    a.download = `bursar-${todayISO()}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
