@@ -2254,12 +2254,12 @@ select {
 .period-card__goals-tab {
   all: unset;
   box-sizing: border-box;
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
   padding: 7px 12px;
-  margin-bottom: 10px;
   border-radius: var(--radius-md);
   background: rgba(43,42,38,0.04);
   border: 2px solid transparent;
