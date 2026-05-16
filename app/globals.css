@@ -1290,6 +1290,23 @@ select {
   color: var(--paper-1);
 }
 
+@media (max-width: 600px) {
+  .segment {
+    display: flex;
+    width: 100%;
+  }
+  .segment__btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 4px;
+    letter-spacing: 0.06em;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 /* =========================================================
    BADGE variants
    ========================================================= */
@@ -2094,6 +2111,23 @@ select {
 .mt-3         { margin-top: 12px; }
 .mt-rule      { margin-top: 28px; }
 
+/* Mobile-only inline element (matches responsive card-view breakpoint) */
+.mobile-only-inline { display: none; }
+@media (max-width: 600px) {
+  .mobile-only-inline { display: inline-flex; }
+}
+
+/* Compact 'jump to add form' button used in section headers on mobile */
+.btn--jump {
+  font-family: var(--font-stamp);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  gap: 4px;
+  align-items: center;
+}
+
 /* =========================================================
    GOALS
    ========================================================= */
@@ -2542,9 +2576,9 @@ select {
     background: var(--paper-1);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-md);
-    padding: 14px 14px 16px 14px;
-    margin: 12px;
-    gap: 12px;
+    padding: 6px 10px 8px 10px;
+    margin: 6px;
+    gap: 3px;
     position: relative;
   }
   .ledger-table--responsive td {
@@ -2557,6 +2591,7 @@ select {
     line-height: auto;
     grid-column: 1 / -1;
   }
+  .ledger-table--responsive td + td { margin-top: 3px; }
   .ledger-table--responsive td::before {
     content: attr(data-label);
     font-family: var(--font-stamp);
@@ -2564,7 +2599,7 @@ select {
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--ink-3);
-    margin-bottom: 4px;
+    margin-bottom: 1px;
     height: auto;
   }
   .ledger-table--responsive td.mono .input::before {
@@ -2620,8 +2655,9 @@ select {
     grid-column: 1;
     grid-row: 1;
     border-bottom: 1px dashed var(--border-soft);
-    padding-bottom: 8px;
-    margin-bottom: 4px;
+    padding-bottom: 4px;
+    margin-bottom: 0;
+    margin-top: 0 !important;
   }
   .ledger-table--responsive td[data-label="Notation"]::before,
   .ledger-table--responsive td[data-label="Source"]::before,
@@ -2638,18 +2674,18 @@ select {
   }
   .ledger-table--responsive .input,
   .ledger-table--responsive .select {
-    height: 36px;
-    min-height: 36px;
+    height: 30px;
+    min-height: 30px;
     font-size: 15px;
-    line-height: 36px;
+    line-height: 30px;
     max-width: 100%;
     min-width: 0;
     box-sizing: border-box;
   }
   .ledger-table--responsive .btn--icon {
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
     font-size: 18px;
     padding: 0;
   }

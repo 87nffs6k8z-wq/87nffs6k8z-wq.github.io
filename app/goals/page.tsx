@@ -6,6 +6,7 @@ import { useHydrated } from "../lib/useHydrated";
 import { moneyFmt } from "../lib/currency";
 import { SavedIndicator, useSavedIndicator } from "../components/SavedIndicator";
 import { UndoToast, type UndoEntry } from "../components/UndoToast";
+import { jumpToAddForm } from "../lib/jumpToAddForm";
 
 function GoalProgressBar({ pct, type }: { pct: number; type: "savings" | "debt" }) {
   const clamped = Math.min(100, Math.max(0, pct));
@@ -43,6 +44,7 @@ function AddGoalForm({
   budgetCategories,
   recurringExpenses,
   attempted,
+  formId,
 }: {
   draft: DraftGoal;
   setDraft: Dispatch<SetStateAction<DraftGoal>>;
@@ -50,12 +52,13 @@ function AddGoalForm({
   budgetCategories: { id: string; name: string }[];
   recurringExpenses: { id: string; name: string }[];
   attempted?: boolean;
+  formId?: string;
 }) {
   const hasLinkable = budgetCategories.length > 0 || recurringExpenses.length > 0;
   const sunkStyle = { background: "var(--surface-sunk)" } as const;
   return (
     <>
-      <div className="inline-form inline-form--3col" style={{ ...sunkStyle, borderRadius: 0, paddingBottom: 12 }}>
+      <div id={formId} className="inline-form inline-form--3col" style={{ ...sunkStyle, borderRadius: 0, paddingBottom: 12 }}>
         <div className="field">
           <label className="field__label">Goal name</label>
           <input
@@ -153,6 +156,7 @@ function AddGoalForm({
           className="btn"
           type="button"
           onClick={onAdd}
+          style={{ width: "100%" }}
         >
           Add goal
         </button>
@@ -404,6 +408,13 @@ export default function GoalsPage() {
               <p className="kicker">Manage</p>
               <h2 className="section-title">All goals</h2>
             </div>
+            <button
+              type="button"
+              className="btn mobile-only-inline btn--jump"
+              onClick={() => jumpToAddForm()}
+            >
+              + Add goal
+            </button>
           </div>
           <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
             <table className="ledger-table ledger-table--responsive">
@@ -629,7 +640,7 @@ export default function GoalsPage() {
               </tbody>
             </table>
           </div>
-          <AddGoalForm draft={draft} setDraft={setDraft} onAdd={addGoal} budgetCategories={budgetCategories} recurringExpenses={recurringExpenses} attempted={attempted} />
+          <AddGoalForm formId="add-form" draft={draft} setDraft={setDraft} onAdd={addGoal} budgetCategories={budgetCategories} recurringExpenses={recurringExpenses} attempted={attempted} />
         </div>
       )}
 

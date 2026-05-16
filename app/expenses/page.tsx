@@ -16,6 +16,7 @@ import {
 import { UndoToast, type UndoEntry } from "../components/UndoToast";
 import { SavedIndicator, useSavedIndicator } from "../components/SavedIndicator";
 import { moneyFmt, moneyShort } from "../lib/currency";
+import { jumpToAddForm } from "../lib/jumpToAddForm";
 
 function BillsCalendar({ state, month }: { state: BudgetState; month: string }) {
   const { year, monthIndex, lastDay } = monthBounds(month);
@@ -349,7 +350,16 @@ export default function ExpensesPage() {
             </div>
             <SavedIndicator visible={saved.visible} />
           </div>
-          {balanced && <span className="stamp stamp--audited">Balanced</span>}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              type="button"
+              className="btn mobile-only-inline btn--jump"
+              onClick={() => jumpToAddForm()}
+            >
+              + Add bill
+            </button>
+            {balanced && <span className="stamp stamp--audited">Balanced</span>}
+          </div>
         </div>
 
         <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
@@ -397,12 +407,18 @@ export default function ExpensesPage() {
                   <td data-label="Due day">
                     <input
                       className="input input--mono"
-                      type="number"
-                      min={1}
-                      max={31}
-                      value={exp.dueDay ?? 1}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      placeholder="1"
+                      value={exp.dueDay || ""}
                       aria-label="Due day"
-                      onChange={(e) => update(exp.id, { dueDay: Math.max(1, Math.min(31, Number(e.target.value))) })}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, "").slice(0, 2);
+                        const n = digits === "" ? 0 : Math.min(31, Number(digits));
+                        update(exp.id, { dueDay: n });
+                      }}
+                      onBlur={() => { if (!exp.dueDay || exp.dueDay < 1) update(exp.id, { dueDay: 1 }); }}
                     />
                   </td>
                   <td data-label="Annual month">
@@ -435,7 +451,7 @@ export default function ExpensesPage() {
         </div>
 
         {/* Inline add form */}
-        <div className={`inline-form${draft.cadence === "annual" ? " inline-form--5col" : " inline-form--4col"}`}>
+        <div id="add-form" className={`inline-form${draft.cadence === "annual" ? " inline-form--5col" : " inline-form--4col"}`}>
           <div className={`field${attempted && nameError ? " field--has-error" : ""}`}>
             <label className="field__label" htmlFor="exp-draft-name">New notation</label>
             <input
@@ -486,11 +502,17 @@ export default function ExpensesPage() {
             <label className="field__label">Due day</label>
             <input
               className="input input--mono"
-              type="number"
-              min={1}
-              max={31}
-              value={draft.dueDay}
-              onChange={(e) => setDraft((d) => ({ ...d, dueDay: Math.max(1, Math.min(31, Number(e.target.value))) }))}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="1"
+              value={draft.dueDay || ""}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, "").slice(0, 2);
+                const n = digits === "" ? 0 : Math.min(31, Number(digits));
+                setDraft((d) => ({ ...d, dueDay: n }));
+              }}
+              onBlur={() => { if (!draft.dueDay || draft.dueDay < 1) setDraft((d) => ({ ...d, dueDay: 1 })); }}
             />
           </div>
           {draft.cadence === "annual" && (
@@ -510,7 +532,7 @@ export default function ExpensesPage() {
             </div>
           )}
           <button className="btn" type="button" onClick={add}>
-            Add
+            Add bill
           </button>
         </div>
       </div>

@@ -159,6 +159,23 @@ export default function OnboardingPage() {
                     </button>
                   ))}
                 </div>
+                <details className="cycle-info">
+                  <summary>About pay cycle types</summary>
+                  <dl className="cycle-info__list">
+                    <div>
+                      <dt>Weekly</dt>
+                      <dd>52 paychecks/year, every 7 days. Anchored to your most recent paycheck date.</dd>
+                    </div>
+                    <div>
+                      <dt>Bi-weekly</dt>
+                      <dd>26 paychecks/year, every 14 days. Anchored to your most recent paycheck date.</dd>
+                    </div>
+                    <div>
+                      <dt>Semi-monthly</dt>
+                      <dd>24 paychecks/year, always on the 1st and 15th. No anchor needed.</dd>
+                    </div>
+                  </dl>
+                </details>
               </div>
               {income.payCycle !== "semimonthly" && (
                 <div className="field">
@@ -198,7 +215,7 @@ export default function OnboardingPage() {
               Recurring obligations. Annual ones get spread across the year automatically.
             </p>
             <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
-              <table className="ledger-table onboarding-table">
+              <table className="ledger-table ledger-table--responsive onboarding-table">
                 <thead>
                   <tr>
                     <th style={{ width: "32%" }}>Notation</th>
@@ -211,7 +228,7 @@ export default function OnboardingPage() {
                 <tbody>
                   {bills.map((b) => (
                     <tr key={b.id}>
-                      <td>
+                      <td data-label="Notation">
                         <input
                           className="input"
                           placeholder="Bill name"
@@ -219,7 +236,7 @@ export default function OnboardingPage() {
                           onChange={(e) => setBills((xs) => xs.map((x) => x.id === b.id ? { ...x, name: e.target.value } : x))}
                         />
                       </td>
-                      <td className="text-right mono">
+                      <td className="text-right mono" data-label="Amount">
                         <input
                           className="input input--mono"
                           type="text"
@@ -232,7 +249,7 @@ export default function OnboardingPage() {
                           }
                         />
                       </td>
-                      <td>
+                      <td data-label="Cadence">
                         <select
                           className="select"
                           value={b.cadence}
@@ -242,16 +259,22 @@ export default function OnboardingPage() {
                           <option value="annual">Annual</option>
                         </select>
                       </td>
-                      <td>
+                      <td data-label="Due">
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                           <input
                             className="input input--mono"
-                            type="number"
-                            min={1}
-                            max={31}
-                            value={b.dueDay}
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            placeholder="1"
+                            value={b.dueDay || ""}
                             style={{ width: "52px", flexShrink: 0 }}
-                            onChange={(e) => setBills((xs) => xs.map((x) => x.id === b.id ? { ...x, dueDay: Math.max(1, Math.min(31, Number(e.target.value))) } : x))}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/\D/g, "").slice(0, 2);
+                              const n = digits === "" ? 0 : Math.min(31, Number(digits));
+                              setBills((xs) => xs.map((x) => x.id === b.id ? { ...x, dueDay: n } : x));
+                            }}
+                            onBlur={() => { if (!b.dueDay || b.dueDay < 1) setBills((xs) => xs.map((x) => x.id === b.id ? { ...x, dueDay: 1 } : x)); }}
                           />
                           {b.cadence === "annual" && (
                             <select
@@ -320,13 +343,18 @@ export default function OnboardingPage() {
                 <div style={{ display: "flex", gap: 6 }}>
                   <input
                     className="input input--mono"
-                    type="number"
-                    min={1}
-                    max={31}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     placeholder="1"
                     value={billDraft.dueDay || ""}
                     style={{ width: "52px", flexShrink: 0 }}
-                    onChange={(e) => setBillDraft((d) => ({ ...d, dueDay: Math.max(1, Math.min(31, Number(e.target.value))) }))}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "").slice(0, 2);
+                      const n = digits === "" ? 0 : Math.min(31, Number(digits));
+                      setBillDraft((d) => ({ ...d, dueDay: n }));
+                    }}
+                    onBlur={() => { if (!billDraft.dueDay || billDraft.dueDay < 1) setBillDraft((d) => ({ ...d, dueDay: 1 })); }}
                   />
                   {billDraft.cadence === "annual" && (
                     <select
@@ -353,7 +381,7 @@ export default function OnboardingPage() {
                   setBillDraft({ name: "", amount: 0, cadence: "monthly", dueDay: 1, dueMonth: 1 });
                 }}
               >
-                Add
+                Add bill
               </button>
             </div>
           </div>
@@ -368,7 +396,7 @@ export default function OnboardingPage() {
               How should every paycheck be split after bills?
             </p>
             <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
-              <table className="ledger-table">
+              <table className="ledger-table ledger-table--responsive onboarding-table">
                 <thead>
                   <tr>
                     <th style={{ width: "45%" }}>Category</th>
@@ -380,7 +408,7 @@ export default function OnboardingPage() {
                 <tbody>
                   {allocations.map((a) => (
                     <tr key={a.id}>
-                      <td>
+                      <td data-label="Category">
                         <input
                           className="input"
                           placeholder="Category"
@@ -388,7 +416,7 @@ export default function OnboardingPage() {
                           onChange={(e) => setAllocations((xs) => xs.map((x) => x.id === a.id ? { ...x, name: e.target.value } : x))}
                         />
                       </td>
-                      <td>
+                      <td data-label="Type">
                         <select
                           className="select"
                           value={a.mode}
@@ -398,7 +426,7 @@ export default function OnboardingPage() {
                           <option value="fixed">Fixed $</option>
                         </select>
                       </td>
-                      <td className="text-right mono">
+                      <td className="text-right mono" data-label="Value">
                         <input
                           className="input input--mono"
                           type="text"
@@ -468,7 +496,7 @@ export default function OnboardingPage() {
                   setAllocDraft({ name: "", mode: "percent", value: 0 });
                 }}
               >
-                Add
+                Add category
               </button>
             </div>
           </div>
@@ -487,7 +515,7 @@ export default function OnboardingPage() {
             </p>
             {goals.length > 0 && (
               <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
-                <table className="ledger-table onboarding-table">
+                <table className="ledger-table ledger-table--responsive onboarding-table">
                   <thead>
                     <tr>
                       <th style={{ width: "45%" }}>Goal</th>
@@ -499,7 +527,7 @@ export default function OnboardingPage() {
                   <tbody>
                     {goals.map((g) => (
                       <tr key={g.id}>
-                        <td>
+                        <td data-label="Goal">
                           <input
                             className="input"
                             placeholder="Goal name"
@@ -507,7 +535,7 @@ export default function OnboardingPage() {
                             onChange={(e) => setGoals((xs) => xs.map((x) => x.id === g.id ? { ...x, name: e.target.value } : x))}
                           />
                         </td>
-                        <td>
+                        <td data-label="Type">
                           <select
                             className="select"
                             value={g.type}
@@ -517,7 +545,7 @@ export default function OnboardingPage() {
                             <option value="debt">Debt payoff</option>
                           </select>
                         </td>
-                        <td className="text-right mono">
+                        <td className="text-right mono" data-label="Target">
                           <input
                             className="input input--mono"
                             type="text"
@@ -588,7 +616,7 @@ export default function OnboardingPage() {
                   setGoalDraft({ name: "", type: "savings", targetAmount: 0 });
                 }}
               >
-                Add
+                Add goal
               </button>
             </div>
           </div>

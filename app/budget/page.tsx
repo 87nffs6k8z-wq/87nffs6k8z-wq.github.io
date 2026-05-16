@@ -8,6 +8,7 @@ import { monthlyIncomeOf } from "../lib/month";
 import { moneyFmt } from "../lib/currency";
 import { SavedIndicator, useSavedIndicator } from "../components/SavedIndicator";
 import { UndoToast, type UndoEntry } from "../components/UndoToast";
+import { jumpToAddForm } from "../lib/jumpToAddForm";
 
 function AllocationRing({
   segments,
@@ -246,7 +247,16 @@ export default function BudgetPage() {
             <p className="kicker">Categories</p>
             <h2 className="section-title">Budget entries</h2>
           </div>
-          <span className={`badge${overdrawn ? " badge--red" : ""}`}>{percentTotal.toFixed(0)}% of remainder</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              type="button"
+              className="btn mobile-only-inline btn--jump"
+              onClick={() => jumpToAddForm()}
+            >
+              + Add category
+            </button>
+            <span className={`badge${overdrawn ? " badge--red" : ""}`}>{percentTotal.toFixed(0)}% of remainder</span>
+          </div>
         </div>
 
         <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
@@ -299,7 +309,7 @@ export default function BudgetPage() {
         </div>
 
         {/* Inline add form */}
-        <div className="inline-form">
+        <div id="add-form" className="inline-form">
           <div className="field">
             <label className="field__label">New category</label>
             <input
@@ -337,7 +347,7 @@ export default function BudgetPage() {
             {attempted && (Math.max(0, Number(draft.value) || 0) === 0) && <p className="field__error">Must be more than 0</p>}
           </div>
           <button className="btn" type="button" onClick={add}>
-            Add
+            Add category
           </button>
         </div>
       </div>

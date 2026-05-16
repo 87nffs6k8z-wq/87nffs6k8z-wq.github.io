@@ -7,6 +7,7 @@ import { todayISO, monthlyIncomeOf } from "../lib/month";
 import { UndoToast, type UndoEntry } from "../components/UndoToast";
 import { SavedIndicator, useSavedIndicator } from "../components/SavedIndicator";
 import { moneyFmt } from "../lib/currency";
+import { jumpToAddForm } from "../lib/jumpToAddForm";
 
 const needsAnchor = (cycle: PayCycle) => cycle === "biweekly" || cycle === "weekly";
 
@@ -185,7 +186,16 @@ export default function IncomePage() {
             </div>
             <SavedIndicator visible={saved.visible} />
           </div>
-          <span className="badge">{state.incomes.length} sources</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              type="button"
+              className="btn mobile-only-inline btn--jump"
+              onClick={() => jumpToAddForm()}
+            >
+              + Add source
+            </button>
+            <span className="badge">{state.incomes.length} sources</span>
+          </div>
         </div>
 
         <div className="ledger-table-wrap-no-line" style={{ borderRadius: "0 0 0 0" }}>
@@ -271,7 +281,7 @@ export default function IncomePage() {
         </div>
 
         {/* Inline add form */}
-        <div className={`inline-form${needsAnchor(draft.payCycle) ? " inline-form--4col" : ""}`}>
+        <div id="add-form" className={`inline-form${needsAnchor(draft.payCycle) ? " inline-form--4col" : ""}`}>
           <div className={`field${attempted && nameError ? " field--has-error" : ""}`}>
             <label className="field__label" htmlFor="inc-draft-name">New source</label>
             <input
