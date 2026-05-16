@@ -8,6 +8,14 @@ import { UndoToast, type UndoEntry } from "../components/UndoToast";
 import { SavedIndicator, useSavedIndicator } from "../components/SavedIndicator";
 import { moneyFmt } from "../lib/currency";
 
+const needsAnchor = (cycle: PayCycle) => cycle === "biweekly" || cycle === "weekly";
+
+const CYCLE_OPTIONS: { value: PayCycle; label: string }[] = [
+  { value: "weekly", label: "Weekly" },
+  { value: "biweekly", label: "Bi-weekly" },
+  { value: "semimonthly", label: "Semi-monthly" },
+];
+
 export default function IncomePage() {
   const hydrated = useHydrated();
   const [state, setState] = useState<BudgetState | null>(null);
@@ -44,13 +52,19 @@ export default function IncomePage() {
   function remove(id: string) {
     setState((s) => {
       if (!s) return s;
-      const target = s.incomes.find((i) => i.id === id);
+      const index = s.incomes.findIndex((i) => i.id === id);
+      const target = s.incomes[index];
       if (!target) return s;
       setUndo({
         id,
         message: `Deleted ${target.name || "income"}`,
         onUndo: () => {
-          setState((cur) => cur ? { ...cur, incomes: [...cur.incomes, target] } : cur);
+          setState((cur) => {
+            if (!cur) return cur;
+            const restored = [...cur.incomes];
+            restored.splice(index, 0, target);
+            return { ...cur, incomes: restored };
+          });
           saved.flash();
         },
       });
@@ -61,7 +75,7 @@ export default function IncomePage() {
   const parsedAmount = Number(draft.amount.replace(/[^0-9.]/g, ""));
   const nameError = !draft.name.trim() ? "Required" : null;
   const amountError = !(parsedAmount > 0) ? "Must be more than 0" : null;
-  const dateError = draft.payCycle === "biweekly" && !draft.lastPaycheckDate ? "Pick a paycheck date" : null;
+  const dateError = needsAnchor(draft.payCycle) && !draft.lastPaycheckDate ? "Pick a paycheck date" : null;
   const canAdd = !nameError && !amountError && !dateError;
 
   function add() {
@@ -82,7 +96,7 @@ export default function IncomePage() {
             amount: Math.max(0, parsedAmount),
             cadence: "monthly" as const,
             payCycle: draft.payCycle,
-            lastPaycheckDate: draft.payCycle === "biweekly" ? draft.lastPaycheckDate || todayISO() : "",
+            lastPaycheckDate: needsAnchor(draft.payCycle) ? draft.lastPaycheckDate || todayISO() : "",
           },
         ],
       };
@@ -111,6 +125,7 @@ export default function IncomePage() {
 
   const monthly = monthlyIncomeOf(state);
   const annual = monthly * 12;
+  const weeklyCount = state.incomes.filter((i) => i.payCycle === "weekly").length;
   const biweeklyCount = state.incomes.filter((i) => i.payCycle === "biweekly").length;
   const semiCount = state.incomes.filter((i) => i.payCycle === "semimonthly").length;
 
@@ -121,13 +136,34 @@ export default function IncomePage() {
         <p className="kicker">Income</p>
         <h1 className="page-head__title">Income ledger</h1>
         <p className="page-head__lead">Track all your income sources. Each one's paycheck dates are calculated independently and feed into your period breakdown.</p>
+        <details className="cycle-info">
+          <summary>About pay cycle types</summary>
+          <dl className="cycle-info__list">
+            <div>
+              <dt>Weekly</dt>
+              <dd>52 paychecks/year, every 7 days. Anchored to your most recent paycheck date.</dd>
+            </div>
+            <div>
+              <dt>Bi-weekly</dt>
+              <dd>26 paychecks/year, every 14 days. Anchored to your most recent paycheck date.</dd>
+            </div>
+            <div>
+              <dt>Semi-monthly</dt>
+              <dd>24 paychecks/year, always on the 1st and 15th. No anchor needed.</dd>
+            </div>
+          </dl>
+        </details>
       </header>
 
       {/* Stats row */}
-      <div className="stat-row">
+      <div className="stat-row stat-row--4">
         <article className="sheet stat" style={{ padding: "16px 22px 18px" }}>
           <div className="stat__label">Monthly income</div>
           <div className="stat__value">{moneyFmt(monthly)}</div>
+        </article>
+        <article className="sheet stat" style={{ padding: "16px 22px 18px" }}>
+          <div className="stat__label">Weekly sources</div>
+          <div className="stat__value">{weeklyCount}</div>
         </article>
         <article className="sheet stat" style={{ padding: "16px 22px 18px" }}>
           <div className="stat__label">Bi-weekly sources</div>
@@ -181,7 +217,6 @@ export default function IncomePage() {
                       inputMode="decimal"
                       pattern="[0-9.]*"
                       value={inc.amount}
-                      style={{ textAlign: "right" }}
                       aria-label="Income amount"
                       onChange={(e) =>
                         update(inc.id, { amount: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) })
@@ -193,19 +228,21 @@ export default function IncomePage() {
                       className="select"
                       value={inc.payCycle}
                       aria-label="Pay cycle"
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const next = e.target.value as PayCycle;
                         update(inc.id, {
-                          payCycle: e.target.value as PayCycle,
-                          lastPaycheckDate: e.target.value === "biweekly" ? inc.lastPaycheckDate || todayISO() : "",
-                        })
-                      }
+                          payCycle: next,
+                          lastPaycheckDate: needsAnchor(next) ? inc.lastPaycheckDate || todayISO() : "",
+                        });
+                      }}
                     >
-                      <option value="biweekly">Bi-weekly</option>
-                      <option value="semimonthly">Semi-monthly</option>
+                      {CYCLE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
                     </select>
                   </td>
                   <td data-label="Anchor">
-                    {inc.payCycle === "biweekly" ? (
+                    {needsAnchor(inc.payCycle) ? (
                       <input
                         className="input"
                         type="date"
@@ -234,7 +271,7 @@ export default function IncomePage() {
         </div>
 
         {/* Inline add form */}
-        <div className={`inline-form${draft.payCycle === "biweekly" ? " inline-form--4col" : ""}`}>
+        <div className={`inline-form${needsAnchor(draft.payCycle) ? " inline-form--4col" : ""}`}>
           <div className={`field${attempted && nameError ? " field--has-error" : ""}`}>
             <label className="field__label" htmlFor="inc-draft-name">New source</label>
             <input
@@ -275,13 +312,21 @@ export default function IncomePage() {
             <select
               className="select"
               value={draft.payCycle}
-              onChange={(e) => setDraft((d) => ({ ...d, payCycle: e.target.value as PayCycle }))}
+              onChange={(e) => {
+                const next = e.target.value as PayCycle;
+                setDraft((d) => ({
+                  ...d,
+                  payCycle: next,
+                  lastPaycheckDate: needsAnchor(next) ? d.lastPaycheckDate || todayISO() : "",
+                }));
+              }}
             >
-              <option value="biweekly">Bi-weekly</option>
-              <option value="semimonthly">Semi-monthly</option>
+              {CYCLE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
             </select>
           </div>
-          {draft.payCycle === "biweekly" && (
+          {needsAnchor(draft.payCycle) && (
             <div className={`field${attempted && dateError ? " field--has-error" : ""}`}>
               <label className="field__label" htmlFor="inc-draft-date">Last paycheck</label>
               <input

@@ -35,10 +35,13 @@ Tests use Mocha + Chai. The test runner is configured in `.mocharc.js` to pick u
 | `paychecks.ts` | `upcomingPaychecks` — forecasts future paycheck dates |
 
 ### Pay cycles
-`PayCycle = "biweekly" | "semimonthly"`
+`PayCycle = "biweekly" | "semimonthly" | "weekly"`
 
-- **biweekly** — 14-day intervals anchored to `lastPaycheckDate`; 26 paychecks/year (factor `26/12` for monthly income)
+- **weekly** — 7-day intervals anchored to `lastPaycheckDate`; 52 paychecks/year (factor `52/12`)
+- **biweekly** — 14-day intervals anchored to `lastPaycheckDate`; 26 paychecks/year (factor `26/12`)
 - **semimonthly** — always 1st and 15th; no anchor needed; 24 paychecks/year (factor `24/12`)
+
+Weekly + biweekly share the `lastPaycheckDate` field; the income page uses a `needsAnchor(cycle)` helper to gate the date input and validation. Unknown payCycle values from imported JSON fall back to biweekly via `coercePayCycle` in `normalizeParsed`.
 
 ### Period logic (critical)
 `paycheckPeriodsForMonth(state, monthKey)` in `month.ts`:
@@ -61,13 +64,15 @@ tests/
   fixtures/                  # 4 scenario JSON files (A–D) for import testing
 ```
 
-Scenarios A–D all test against May 2026 (31-day month):
+Scenarios in `paycheck-periods.test.ts` all test against May 2026 (31-day month):
 - **A** — two semi-monthly incomes
 - **B** — semi-monthly + bi-weekly (May 2 anchor)
 - **C** — two bi-weekly, same anchor
 - **D** — two bi-weekly, offset anchors
+- **E** — single weekly income (May 1 anchor → 5 paychecks)
+- **F** — weekly + bi-weekly mixed (verifies 2-day merge rule with high paycheck density)
 
-When adding a new pay cycle or period behaviour, add a new scenario letter (E, F…) in both the test file and `tests/fixtures/`.
+Note: `tests/fixtures/scenario-{e,f,g}*.json` already exist for unrelated full-state import scenarios; new paycheck-pattern fixtures should pick letters from H onward to avoid collision. When adding a new pay cycle or period behaviour, add an inline scenario in the test file (preferred) and optionally a matching fixture.
 
 ## CSS conventions (`app/globals.css`)
 

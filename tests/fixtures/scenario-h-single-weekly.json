@@ -1,0 +1,107 @@
+{
+  "app": "Paper & Ink Ledger",
+  "format": "paperInkLedger:v1",
+  "exportedAt": "2026-05-04T12:00:00.000Z",
+  "data": {
+    "meta": {
+      "onboardingComplete": true,
+      "version": 1,
+      "createdAt": "2026-05-04T12:00:00.000Z"
+    },
+    "settings": {
+      "payCycleType": "weekly",
+      "paycheckAmount": 1200
+    },
+    "payCycle": "weekly",
+    "paycheckAmount": 1200,
+    "lastPaycheckDate": "2026-05-01",
+    "incomeMonthly": 5200,
+    "incomes": [
+      {
+        "id": "income-h1",
+        "name": "Weekly Paycheck",
+        "amount": 1200,
+        "cadence": "monthly",
+        "payCycle": "weekly",
+        "lastPaycheckDate": "2026-05-01"
+      }
+    ],
+    "recurringExpenses": [
+      {
+        "id": "exp-h-rent",
+        "name": "Rent",
+        "amount": 1300,
+        "cadence": "monthly",
+        "dueDay": 1,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-h-internet",
+        "name": "Internet",
+        "amount": 70,
+        "cadence": "monthly",
+        "dueDay": 5,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-h-phone",
+        "name": "Phone",
+        "amount": 55,
+        "cadence": "monthly",
+        "dueDay": 12,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-h-utilities",
+        "name": "Utilities",
+        "amount": 120,
+        "cadence": "monthly",
+        "dueDay": 18,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-h-groceries-sub",
+        "name": "Grocery Membership",
+        "amount": 25,
+        "cadence": "monthly",
+        "dueDay": 24,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-h-car-ins",
+        "name": "Car Insurance",
+        "amount": 1440,
+        "cadence": "annual",
+        "dueDay": 8,
+        "dueMonth": 6,
+        "paidPeriods": []
+      }
+    ],
+    "budgetCategories": [
+      {
+        "id": "cat-h-savings",
+        "name": "Savings",
+        "mode": "percent",
+        "value": 15
+      },
+      {
+        "id": "cat-h-groceries",
+        "name": "Groceries",
+        "mode": "fixed",
+        "value": 400
+      },
+      {
+        "id": "cat-h-fun",
+        "name": "Fun money",
+        "mode": "percent",
+        "value": 10
+      },
+      {
+        "id": "cat-h-buffer",
+        "name": "Buffer",
+        "mode": "percent",
+        "value": 75
+      }
+    ]
+  }
+}

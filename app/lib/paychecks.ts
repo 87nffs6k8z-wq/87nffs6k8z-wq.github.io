@@ -67,15 +67,14 @@ export function upcomingPaychecks(
   }
 
   const last = parseISO(lastPaycheckISO);
-  if (!last) return { dates: [], error: "Enter your last paycheck date to forecast bi-weekly paydays." };
+  if (!last) return { dates: [], error: "Enter your last paycheck date to forecast paydays." };
 
   const lastDay = startOfDay(last);
+  const intervalDays = payCycle === "weekly" ? 7 : 14;
 
-  // biweekly
-  // Next dates are last + 14*n
   const dates: string[] = [];
   for (let i = 1; i <= count; i++) {
-    dates.push(toISO(addDays(lastDay, 14 * i)));
+    dates.push(toISO(addDays(lastDay, intervalDays * i)));
   }
   return { dates };
 }

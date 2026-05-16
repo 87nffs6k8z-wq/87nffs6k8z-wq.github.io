@@ -179,14 +179,20 @@ export default function ExpensesPage() {
   function remove(id: string) {
     setState((s) => {
       if (!s) return s;
-      const target = s.recurringExpenses.find((e) => e.id === id);
+      const index = s.recurringExpenses.findIndex((e) => e.id === id);
+      const target = s.recurringExpenses[index];
       if (!target) return s;
       const next = { ...s, recurringExpenses: s.recurringExpenses.filter((e) => e.id !== id) };
       setUndo({
         id,
         message: `Deleted ${target.name || "bill"}`,
         onUndo: () => {
-          setState((cur) => cur ? { ...cur, recurringExpenses: [...cur.recurringExpenses, target] } : cur);
+          setState((cur) => {
+            if (!cur) return cur;
+            const restored = [...cur.recurringExpenses];
+            restored.splice(index, 0, target);
+            return { ...cur, recurringExpenses: restored };
+          });
           saved.flash();
         },
       });
@@ -371,7 +377,6 @@ export default function ExpensesPage() {
                       inputMode="decimal"
                       pattern="[0-9.]*"
                       value={exp.amount}
-                      style={{ textAlign: "right" }}
                       aria-label="Bill amount"
                       onChange={(e) =>
                         update(exp.id, { amount: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) })

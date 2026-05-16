@@ -94,6 +94,7 @@ function AddGoalForm({
             }
             onKeyDown={(e) => e.key === "Enter" && onAdd()}
             pattern="[0-9.]*"
+            style={{ textAlign: "left" }}
           />
           {attempted && draft.targetAmount <= 0 && <p className="field__error">Must be more than 0</p>}
         </div>
@@ -443,7 +444,7 @@ export default function GoalsPage() {
                             <option value="debt">Debt</option>
                           </select>
                         </td>
-                        <td className="mono" data-label="Target">
+                        <td className="text-right mono" data-label="Target">
                           <input
                             className="input input--mono"
                             type="text"

@@ -73,16 +73,17 @@ export function incomeDatesForMonth(income: Income, monthKey: string): Date[] {
   const last = parseISODate(income.lastPaycheckDate);
   if (!last) return [];
 
+  const intervalDays = income.payCycle === "weekly" ? 7 : 14;
   const monthStart = new Date(year, monthIndex, 1);
   const monthEnd = new Date(year, monthIndex + 1, 0);
   const dates: Date[] = [];
 
   let cursor = new Date(last);
-  while (cursor > monthStart) cursor = addDays(cursor, -14);
-  while (cursor < monthStart) cursor = addDays(cursor, 14);
+  while (cursor > monthStart) cursor = addDays(cursor, -intervalDays);
+  while (cursor < monthStart) cursor = addDays(cursor, intervalDays);
   while (cursor <= monthEnd) {
     dates.push(new Date(cursor));
-    cursor = addDays(cursor, 14);
+    cursor = addDays(cursor, intervalDays);
   }
 
   return dates;
@@ -96,7 +97,10 @@ export function recurringDueDate(expense: RecurringExpense, monthKey: string): D
 
 export function monthlyIncomeOf(state: BudgetState): number {
   return state.incomes.reduce((sum, inc) => {
-    const factor = inc.payCycle === "biweekly" ? 26 / 12 : 24 / 12;
+    const factor =
+      inc.payCycle === "weekly" ? 52 / 12 :
+      inc.payCycle === "biweekly" ? 26 / 12 :
+      24 / 12;
     return sum + inc.amount * factor;
   }, 0);
 }

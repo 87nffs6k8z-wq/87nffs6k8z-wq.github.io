@@ -284,7 +284,6 @@ export default function BudgetPage() {
                         type="text"
                         inputMode="decimal"
                         value={c.value}
-                        style={{ textAlign: "right" }}
                         onChange={(e) =>
                           update(c.id, { value: Math.max(0, Number(e.target.value.replace(/[^0-9.]/g, "")) || 0) })
                         }

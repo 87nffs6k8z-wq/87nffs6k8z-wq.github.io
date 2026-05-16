@@ -1,6 +1,12 @@
 export const BUDGET_KEY = "budgetApp:v1";
 
-export type PayCycle = "biweekly" | "semimonthly";
+export type PayCycle = "biweekly" | "semimonthly" | "weekly";
+
+const PAY_CYCLES: readonly PayCycle[] = ["biweekly", "semimonthly", "weekly"];
+
+function coercePayCycle(value: unknown, fallback: PayCycle = "biweekly"): PayCycle {
+  return PAY_CYCLES.includes(value as PayCycle) ? (value as PayCycle) : fallback;
+}
 
 export type Expense = {
   id: string;
@@ -243,15 +249,18 @@ function normalizeLockedMonths(raw: any[]): LockedMonth[] {
 }
 
 function normalizeParsed(parsed: any): BudgetState {
-  const payCycle: PayCycle = parsed?.payCycle === "semimonthly" ? "semimonthly" : "biweekly";
+  const payCycle: PayCycle = coercePayCycle(parsed?.payCycle);
   const paycheckAmount = Math.max(0, Number(parsed?.paycheckAmount ?? parsed?.settings?.paycheckAmount ?? 0) || 0);
-  const payCycleType: PayCycle = parsed?.settings?.payCycleType === "semimonthly" ? "semimonthly" : payCycle;
+  const payCycleType: PayCycle = coercePayCycle(parsed?.settings?.payCycleType, payCycle);
 
   const recurringExpenses = normalizeRecurringExpenses(
     Array.isArray(parsed?.recurringExpenses) ? parsed.recurringExpenses : []
   );
 
-  const incomes: Income[] = Array.isArray(parsed?.incomes) ? parsed.incomes : [];
+  const incomes: Income[] = (Array.isArray(parsed?.incomes) ? parsed.incomes : []).map((inc: any) => ({
+    ...inc,
+    payCycle: coercePayCycle(inc?.payCycle),
+  }));
   const budgetCategories = normalizeBudgetCategories(parsed);
   const goals = normalizeGoals(Array.isArray(parsed?.goals) ? parsed.goals : []);
   const lockedMonths = normalizeLockedMonths(Array.isArray(parsed?.lockedMonths) ? parsed.lockedMonths : []);

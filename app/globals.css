@@ -1104,8 +1104,21 @@ select {
   gap: 14px;
 }
 
+.stat-row--4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 900px) {
+  .stat-row--4 { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 720px) {
   .stat-row { grid-template-columns: 1fr; gap: 10px; }
+  .stat-row--4 { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+}
+
+@media (max-width: 480px) {
+  .stat-row--4 { grid-template-columns: 1fr; }
 }
 
 .stat__label {
@@ -1635,6 +1648,108 @@ select {
   font-size: 15px;
   color: var(--ink-1);
   font-weight: 500;
+}
+
+/* =========================================================
+   CYCLE INFO TOOLTIP
+   ========================================================= */
+
+.cycle-info {
+  margin-top: 12px;
+  font-family: var(--font-hand);
+}
+
+.cycle-info > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-family: var(--font-stamp);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 4px 10px 4px 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: rgba(43, 42, 38, 0.04);
+  list-style: none;
+  user-select: none;
+  width: fit-content;
+  transition: background 120ms, color 120ms;
+}
+
+.cycle-info > summary::-webkit-details-marker { display: none; }
+
+.cycle-info > summary::before {
+  content: "i";
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink-1);
+  color: var(--paper-1);
+  font-family: var(--font-numerals);
+  font-size: 9px;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.cycle-info > summary:hover {
+  background: rgba(43, 42, 38, 0.10);
+  color: var(--ink-1);
+}
+
+.cycle-info[open] > summary {
+  background: var(--ink-1);
+  color: var(--paper-1);
+}
+
+.cycle-info[open] > summary::before {
+  background: var(--paper-1);
+  color: var(--ink-1);
+}
+
+.cycle-info__list {
+  margin: 12px 0 0;
+  padding: 14px 18px;
+  background: var(--surface-sunk);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
+  display: grid;
+  gap: 10px;
+  max-width: 56ch;
+}
+
+.cycle-info__list > div {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+  align-items: baseline;
+}
+
+@media (max-width: 480px) {
+  .cycle-info__list > div { grid-template-columns: 1fr; gap: 2px; }
+}
+
+.cycle-info__list dt {
+  font-family: var(--font-stamp);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-1);
+  font-weight: 500;
+  margin: 0;
+}
+
+.cycle-info__list dd {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-2);
 }
 
 /* =========================================================
@@ -2381,6 +2496,7 @@ select {
 @media (max-width: 600px) {
   .ledger-table-wrap-no-line:has(.ledger-table--responsive) {
     padding: 0;
+    overflow: visible;
   }
 
   .ledger-table--responsive {
@@ -2390,8 +2506,8 @@ select {
   .ledger-table--responsive thead { display: none; }
   .ledger-table--responsive tbody { display: block; }
   .ledger-table--responsive tr {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     background: var(--paper-1);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-md);
@@ -2408,6 +2524,7 @@ select {
     height: auto;
     min-height: auto;
     line-height: auto;
+    grid-column: 1 / -1;
   }
   .ledger-table--responsive td::before {
     content: attr(data-label);
@@ -2427,45 +2544,64 @@ select {
   }
   .ledger-table--responsive td.mono { position: relative; }
   .ledger-table--responsive td.mono .input {
-    padding-left: 16px;
     text-align: left;
   }
-  .ledger-table--responsive td.text-right { align-items: flex-start; }
+  .ledger-table--responsive td.text-right {
+    align-items: flex-start;
+  }
+  .ledger-table--responsive td.text-right .input {
+    text-align: left !important;
+  }
   .ledger-table--responsive td.text-tight {
-    position: absolute;
-    top: 12px;
-    right: 12px;
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
     flex-direction: row;
-    gap: 4px;
+    align-items: center;
+    justify-content: flex-end;
     border: none;
     padding: 0;
     margin: 0;
     height: auto;
-    min-height: auto;
-    padding-top: 0;
+    min-height: 0;
+    width: auto;
   }
-  .ledger-table--responsive td.text-tight > div {
-    display: flex;
-    gap: 4px;
+  .ledger-table--responsive td.text-tight .btn--icon {
+    background: rgba(182, 48, 31, 0.10);
+    color: var(--signal-red);
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    flex-shrink: 0;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
   }
-  .ledger-table--responsive td.text-tight .btn--ghost {
-    padding: 4px 8px;
-    font-size: 10px;
+  .ledger-table--responsive td.text-tight .btn--icon:hover {
+    background: rgba(182, 48, 31, 0.18);
+    color: var(--signal-red);
   }
   .ledger-table--responsive td.text-tight::before { display: none; }
   .ledger-table--responsive td[data-label="Notation"],
-  .ledger-table--responsive td[data-label="Source"] {
+  .ledger-table--responsive td[data-label="Source"],
+  .ledger-table--responsive td[data-label="Goal"],
+  .ledger-table--responsive td[data-label="Category"] {
+    grid-column: 1;
+    grid-row: 1;
     border-bottom: 1px dashed var(--border-soft);
     padding-bottom: 8px;
     margin-bottom: 4px;
   }
   .ledger-table--responsive td[data-label="Notation"]::before,
-  .ledger-table--responsive td[data-label="Source"]::before {
+  .ledger-table--responsive td[data-label="Source"]::before,
+  .ledger-table--responsive td[data-label="Goal"]::before,
+  .ledger-table--responsive td[data-label="Category"]::before {
     display: none;
   }
   .ledger-table--responsive td[data-label="Notation"] .input,
-  .ledger-table--responsive td[data-label="Source"] .input {
+  .ledger-table--responsive td[data-label="Source"] .input,
+  .ledger-table--responsive td[data-label="Goal"] .input,
+  .ledger-table--responsive td[data-label="Category"] .input {
     font-size: 17px;
     font-weight: 500;
   }
@@ -2475,6 +2611,9 @@ select {
     min-height: 36px;
     font-size: 15px;
     line-height: 36px;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
   }
   .ledger-table--responsive .btn--icon {
     width: 32px;

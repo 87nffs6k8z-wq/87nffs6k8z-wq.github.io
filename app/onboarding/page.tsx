@@ -67,14 +67,14 @@ export default function OnboardingPage() {
     saveBudget(
       defaultBudget({
         meta: { onboardingComplete: true, version: 1, createdAt: new Date().toISOString() },
-        incomes: [{ id: newId(), name: income.name.trim() || "Primary income", amount: Math.max(0, income.amount), cadence: "monthly", payCycle: income.payCycle, lastPaycheckDate: income.payCycle === "biweekly" ? income.lastPaycheckDate : "" }],
+        incomes: [{ id: newId(), name: income.name.trim() || "Primary income", amount: Math.max(0, income.amount), cadence: "monthly", payCycle: income.payCycle, lastPaycheckDate: income.payCycle !== "semimonthly" ? income.lastPaycheckDate : "" }],
         recurringExpenses: bills.filter((b) => b.name.trim()).map((b) => ({ ...b, paidPeriods: [] }) as RecurringExpense),
         budgetCategories: allocations.filter((a) => a.name.trim()),
         goals: goals.filter((g) => g.name.trim()).map((g) => ({ id: g.id, name: g.name.trim(), type: g.type, targetAmount: g.targetAmount, linkedBudgetCategoryIds: [], linkedExpenseIds: [], manualAdjustments: [], appliedPeriods: [] }) as Goal),
         payCycle: income.payCycle,
         paycheckAmount: income.amount,
-        incomeMonthly: income.payCycle === "biweekly" ? (income.amount * 26) / 12 : (income.amount * 24) / 12,
-        lastPaycheckDate: income.payCycle === "biweekly" ? income.lastPaycheckDate : "",
+        incomeMonthly: income.payCycle === "weekly" ? (income.amount * 52) / 12 : income.payCycle === "biweekly" ? (income.amount * 26) / 12 : (income.amount * 24) / 12,
+        lastPaycheckDate: income.payCycle !== "semimonthly" ? income.lastPaycheckDate : "",
       }),
     );
     router.replace("/");
@@ -146,7 +146,7 @@ export default function OnboardingPage() {
               <div className="field">
                 <label className="field__label">Pay cycle</label>
                 <div className="segment" role="radiogroup">
-                  {([["biweekly", "Bi-weekly"], ["semimonthly", "Semi-monthly"]] as const).map(([val, lbl]) => (
+                  {([["weekly", "Weekly"], ["biweekly", "Bi-weekly"], ["semimonthly", "Semi-monthly"]] as const).map(([val, lbl]) => (
                     <button
                       key={val}
                       type="button"
@@ -160,7 +160,7 @@ export default function OnboardingPage() {
                   ))}
                 </div>
               </div>
-              {income.payCycle === "biweekly" && (
+              {income.payCycle !== "semimonthly" && (
                 <div className="field">
                   <label className="field__label">Most recent paycheck</label>
                   <input
@@ -169,7 +169,7 @@ export default function OnboardingPage() {
                     value={income.lastPaycheckDate}
                     onChange={(e) => setIncome((d) => ({ ...d, lastPaycheckDate: e.target.value }))}
                   />
-                  <p className="field__hint">Used to forecast your bi-weekly paycheck dates.</p>
+                  <p className="field__hint">Used to forecast your {income.payCycle === "weekly" ? "weekly" : "bi-weekly"} paycheck dates.</p>
                 </div>
               )}
             </div>

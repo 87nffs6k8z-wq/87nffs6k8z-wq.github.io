@@ -1,0 +1,179 @@
+{
+  "app": "Paper & Ink Ledger",
+  "format": "paperInkLedger:v1",
+  "exportedAt": "2026-05-14T12:00:00.000Z",
+  "data": {
+    "meta": {
+      "onboardingComplete": true,
+      "version": 1,
+      "createdAt": "2026-01-10T08:00:00.000Z"
+    },
+    "settings": {
+      "payCycleType": "weekly",
+      "paycheckAmount": 900
+    },
+    "payCycle": "weekly",
+    "paycheckAmount": 900,
+    "lastPaycheckDate": "2026-05-01",
+    "incomeMonthly": 7800,
+    "incomes": [
+      {
+        "id": "income-i1",
+        "name": "Restaurant Shifts",
+        "amount": 900,
+        "cadence": "monthly",
+        "payCycle": "weekly",
+        "lastPaycheckDate": "2026-05-01"
+      },
+      {
+        "id": "income-i2",
+        "name": "Partner's Salary",
+        "amount": 1800,
+        "cadence": "monthly",
+        "payCycle": "biweekly",
+        "lastPaycheckDate": "2026-05-02"
+      }
+    ],
+    "recurringExpenses": [
+      {
+        "id": "exp-i-rent",
+        "name": "Rent",
+        "amount": 1850,
+        "cadence": "monthly",
+        "dueDay": 1,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-i-electric",
+        "name": "Electric",
+        "amount": 95,
+        "cadence": "monthly",
+        "dueDay": 6,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-i-internet",
+        "name": "Internet",
+        "amount": 65,
+        "cadence": "monthly",
+        "dueDay": 9,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-i-phones",
+        "name": "Phone Plan (2 lines)",
+        "amount": 120,
+        "cadence": "monthly",
+        "dueDay": 14,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-i-gym",
+        "name": "Gym",
+        "amount": 50,
+        "cadence": "monthly",
+        "dueDay": 16,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-i-student",
+        "name": "Student Loan",
+        "amount": 280,
+        "cadence": "monthly",
+        "dueDay": 20,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-i-cc",
+        "name": "Credit Card (min)",
+        "amount": 175,
+        "cadence": "monthly",
+        "dueDay": 23,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-i-streaming",
+        "name": "Streaming Bundle",
+        "amount": 32,
+        "cadence": "monthly",
+        "dueDay": 27,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-i-renters",
+        "name": "Renter's Insurance",
+        "amount": 220,
+        "cadence": "annual",
+        "dueDay": 12,
+        "dueMonth": 9,
+        "paidPeriods": []
+      },
+      {
+        "id": "exp-i-car-reg",
+        "name": "Car Registration",
+        "amount": 180,
+        "cadence": "annual",
+        "dueDay": 20,
+        "dueMonth": 11,
+        "paidPeriods": []
+      }
+    ],
+    "budgetCategories": [
+      {
+        "id": "cat-i-debt",
+        "name": "Debt Snowball",
+        "mode": "fixed",
+        "value": 350
+      },
+      {
+        "id": "cat-i-groceries",
+        "name": "Groceries",
+        "mode": "percent",
+        "value": 18
+      },
+      {
+        "id": "cat-i-savings",
+        "name": "Emergency Fund",
+        "mode": "percent",
+        "value": 15
+      },
+      {
+        "id": "cat-i-fun",
+        "name": "Date Nights",
+        "mode": "percent",
+        "value": 7
+      },
+      {
+        "id": "cat-i-buffer",
+        "name": "Buffer",
+        "mode": "percent",
+        "value": 60
+      }
+    ],
+    "goals": [
+      {
+        "id": "goal-i-cc",
+        "name": "Credit Card Payoff",
+        "type": "debt",
+        "targetAmount": 5200,
+        "linkedBudgetCategoryIds": ["cat-i-debt"],
+        "linkedExpenseIds": ["exp-i-cc"],
+        "manualAdjustments": [],
+        "appliedPeriods": []
+      },
+      {
+        "id": "goal-i-ef",
+        "name": "3-month Emergency Fund",
+        "type": "savings",
+        "targetAmount": 9000,
+        "linkedBudgetCategoryIds": ["cat-i-savings"],
+        "linkedExpenseIds": [],
+        "manualAdjustments": [
+          { "id": "adj-i-1", "amount": 1200, "note": "Tax refund deposit" }
+        ],
+        "appliedPeriods": []
+      }
+    ],
+    "lockedMonths": []
+  }
+}

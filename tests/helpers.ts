@@ -28,6 +28,10 @@ export function biwIncome(id: string, name: string, amount: number, anchor: stri
   return { id, name, amount, cadence: "monthly", payCycle: "biweekly", lastPaycheckDate: anchor };
 }
 
+export function weeklyIncome(id: string, name: string, amount: number, anchor: string): Income {
+  return { id, name, amount, cadence: "monthly", payCycle: "weekly", lastPaycheckDate: anchor };
+}
+
 export function monthlyExpense(id: string, name: string, amount: number, dueDay: number): RecurringExpense {
   return { id, name, amount, cadence: "monthly", dueDay, paidPeriods: [] };
 }

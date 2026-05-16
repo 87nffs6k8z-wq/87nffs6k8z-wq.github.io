@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { incomeDatesForMonth, paycheckPeriodsForMonth, monthlyIncomeOf } from "../app/lib/month";
-import { makeState, semiIncome, biwIncome, monthlyExpense, annualExpense } from "./helpers";
+import { makeState, semiIncome, biwIncome, weeklyIncome, monthlyExpense, annualExpense } from "./helpers";
 
 // All scenarios tested against May 2026 (31 days)
 const MAY = "2026-05";
@@ -58,6 +58,48 @@ describe("incomeDatesForMonth", () => {
       expect(incomeDatesForMonth(inc, MAY)).to.have.lengthOf(0);
     });
   });
+
+  describe("weekly — May 1 anchor (5-paycheck month)", () => {
+    const inc = weeklyIncome("a", "Job", 1000, "2026-05-01");
+
+    it("returns 5 dates", () => {
+      expect(incomeDatesForMonth(inc, MAY)).to.have.lengthOf(5);
+    });
+
+    it("dates fall on the 1st, 8th, 15th, 22nd, and 29th", () => {
+      const days = incomeDatesForMonth(inc, MAY).map((d) => d.getDate());
+      expect(days).to.deep.equal([1, 8, 15, 22, 29]);
+    });
+  });
+
+  describe("weekly — May 5 anchor (4-paycheck month)", () => {
+    const inc = weeklyIncome("a", "Job", 1000, "2026-05-05");
+
+    it("returns 4 dates", () => {
+      expect(incomeDatesForMonth(inc, MAY)).to.have.lengthOf(4);
+    });
+
+    it("dates fall on the 5th, 12th, 19th, and 26th", () => {
+      const days = incomeDatesForMonth(inc, MAY).map((d) => d.getDate());
+      expect(days).to.deep.equal([5, 12, 19, 26]);
+    });
+  });
+
+  describe("weekly — anchor before the month (walks forward from past)", () => {
+    const inc = weeklyIncome("a", "Job", 1000, "2026-04-24");
+
+    it("still returns dates in May", () => {
+      const days = incomeDatesForMonth(inc, MAY).map((d) => d.getDate());
+      expect(days).to.deep.equal([1, 8, 15, 22, 29]);
+    });
+  });
+
+  describe("weekly — missing anchor", () => {
+    it("returns an empty array", () => {
+      const inc = weeklyIncome("a", "Job", 1000, "");
+      expect(incomeDatesForMonth(inc, MAY)).to.have.lengthOf(0);
+    });
+  });
 });
 
 // ─── monthlyIncomeOf ────────────────────────────────────────────────────────
@@ -73,6 +115,11 @@ describe("monthlyIncomeOf", () => {
     expect(monthlyIncomeOf(state)).to.be.closeTo(5200, 0.01);
   });
 
+  it("weekly $1000/paycheck → $4,333.33/month (52 × 1000 / 12)", () => {
+    const state = makeState([weeklyIncome("a", "Job", 1000, "2026-05-01")]);
+    expect(monthlyIncomeOf(state)).to.be.closeTo(4333.33, 0.01);
+  });
+
   it("two semi-monthly sources → sums both", () => {
     const state = makeState([semiIncome("a", "Job A", 2000), semiIncome("b", "Job B", 1500)]);
     expect(monthlyIncomeOf(state)).to.equal(7000);
@@ -84,6 +131,15 @@ describe("monthlyIncomeOf", () => {
       biwIncome("b", "Biw", 1200, "2026-05-02"),        // 1200 × 26/12 = 2600
     ]);
     expect(monthlyIncomeOf(state)).to.be.closeTo(6600, 0.01);
+  });
+
+  it("mixed sources → sums weekly + bi-weekly + semi correctly", () => {
+    const state = makeState([
+      semiIncome("a", "Semi", 2000),                    // 4000
+      biwIncome("b", "Biw", 1200, "2026-05-02"),        // 2600
+      weeklyIncome("c", "Wk", 600, "2026-05-01"),       // 600 × 52/12 = 2600
+    ]);
+    expect(monthlyIncomeOf(state)).to.be.closeTo(9200, 0.01);
   });
 });
 
@@ -268,6 +324,88 @@ describe("Scenario D — two bi-weekly incomes, offset anchors (May 2 and May 9)
     const last = periods[periods.length - 1];
     expect(last.paycheckDay).to.equal(30);
     expect(last.label).to.include("Jun");
+  });
+});
+
+// ─── Scenario E: weekly income, 5-paycheck month ─────────────────────────────
+
+describe("Scenario E — single weekly income (anchor May 1, 5 paychecks)", () => {
+  const state = makeState([weeklyIncome("a", "Weekly Job", 1000, "2026-05-01")]);
+  // Pays on May 1, 8, 15, 22, 29 → 5 periods
+
+  it("produces 5 periods", () => {
+    expect(paycheckPeriodsForMonth(state, MAY)).to.have.lengthOf(5);
+  });
+
+  it("paycheck days are [1, 8, 15, 22, 29]", () => {
+    const days = paycheckPeriodsForMonth(state, MAY).map((p) => p.paycheckDay);
+    expect(days).to.deep.equal([1, 8, 15, 22, 29]);
+  });
+
+  it("each period covers 7 days except the last (which extends into June)", () => {
+    const periods = paycheckPeriodsForMonth(state, MAY);
+    expect(periods[0].endDay - periods[0].startDay + 1).to.equal(7); // 1–7
+    expect(periods[1].endDay - periods[1].startDay + 1).to.equal(7); // 8–14
+    expect(periods[2].endDay - periods[2].startDay + 1).to.equal(7); // 15–21
+    expect(periods[3].endDay - periods[3].startDay + 1).to.equal(7); // 22–28
+    expect(periods[4].startDay).to.equal(29);                         // 29–31 in May
+    expect(periods[4].endDay).to.equal(31);
+  });
+
+  it("each period receives exactly one paycheck of $1,000", () => {
+    paycheckPeriodsForMonth(state, MAY).forEach((p) => {
+      expect(p.incomes).to.have.lengthOf(1);
+      expect(p.totalIncome).to.equal(1000);
+    });
+  });
+
+  it("monthly total income is $5,000 (5 paychecks × $1,000)", () => {
+    const total = paycheckPeriodsForMonth(state, MAY).reduce((s, p) => s + p.totalIncome, 0);
+    expect(total).to.equal(5000);
+  });
+
+  it("last period label extends into June (overhang)", () => {
+    const periods = paycheckPeriodsForMonth(state, MAY);
+    const last = periods[periods.length - 1];
+    expect(last.label).to.include("Jun");
+  });
+});
+
+// ─── Scenario F: weekly + bi-weekly mixed ─────────────────────────────────────
+
+describe("Scenario F — weekly (May 1) + bi-weekly (May 2)", () => {
+  const state = makeState([
+    weeklyIncome("w", "Weekly Job", 800, "2026-05-01"),   // pays: 1, 8, 15, 22, 29
+    biwIncome("b", "Biweekly Job", 1500, "2026-05-02"),   // pays: 2, 16, 30
+  ]);
+  // Raw paycheck days: [1, 2, 8, 15, 16, 22, 29, 30]
+  // After 2-day merge: [1, 8, 15, 22, 29] → 5 periods
+  // The biweekly's day-2 lands inside [1,7], day-16 inside [15,21], day-30 inside [29,31]
+
+  it("merges into 5 periods", () => {
+    expect(paycheckPeriodsForMonth(state, MAY)).to.have.lengthOf(5);
+  });
+
+  it("paycheck days are [1, 8, 15, 22, 29]", () => {
+    const days = paycheckPeriodsForMonth(state, MAY).map((p) => p.paycheckDay);
+    expect(days).to.deep.equal([1, 8, 15, 22, 29]);
+  });
+
+  it("weekly income pays in all 5 periods", () => {
+    const periods = paycheckPeriodsForMonth(state, MAY);
+    const withWeekly = periods.filter((p) => p.incomes.some((i) => i.name === "Weekly Job"));
+    expect(withWeekly).to.have.lengthOf(5);
+  });
+
+  it("bi-weekly income pays in 3 periods (days 2, 16, 30 land in periods 1, 3, 5)", () => {
+    const periods = paycheckPeriodsForMonth(state, MAY);
+    const withBiw = periods.filter((p) => p.incomes.some((i) => i.name === "Biweekly Job"));
+    expect(withBiw.map((p) => p.paycheckDay)).to.deep.equal([1, 15, 29]);
+  });
+
+  it("monthly total income: $4,000 weekly + $4,500 biweekly = $8,500", () => {
+    const total = paycheckPeriodsForMonth(state, MAY).reduce((s, p) => s + p.totalIncome, 0);
+    expect(total).to.equal(8500);
   });
 });
 
